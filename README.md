@@ -1,9 +1,10 @@
 
 
 ## Blueberry Browser
+[Tutorial Market Competitor Analysis](./resources/CompetitorAnalysis.mp4)
+
 [Tutorial News Research](./resources/Tutorial_News_Research.mp4)
 
-[Tutorial Market Competitor Analysis](./resources/CompetitorAnalysis.mp4)
 
 
 The above video tutorials show two main blueberry use cases:
