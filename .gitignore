@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+.venv/
 .pnp
 .pnp.js
 
@@ -112,6 +113,10 @@ release-builds/
 logs/
 *.log
 
+# Local vector database
+data/chroma/*
+!data/chroma/.gitkeep
+
 # Cache directories
 .cache/
 .parcel-cache/
@@ -134,3 +139,4 @@ logs/
 *.pem
 *.key
 *.cert
+langchain_supervisor_skeleton/generated/

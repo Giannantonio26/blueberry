@@ -1,4 +1,5 @@
 import { NativeImage, WebContentsView } from "electron";
+import { showIdleBrowserCompanion } from "./BrowserCompanionOverlay";
 
 export class Tab {
   private webContentsView: WebContentsView;
@@ -43,6 +44,10 @@ export class Tab {
     this.webContentsView.webContents.on("did-navigate-in-page", (_, url) => {
       this._url = url;
     });
+
+    this.webContentsView.webContents.on("did-stop-loading", () => {
+      void this.ensureIdleBrowserCompanion();
+    });
   }
 
   // Getters
@@ -74,6 +79,7 @@ export class Tab {
   show(): void {
     this._isVisible = true;
     this.webContentsView.setVisible(true);
+    void this.ensureIdleBrowserCompanion();
   }
 
   hide(): void {
@@ -90,11 +96,31 @@ export class Tab {
   }
 
   async getTabHtml(): Promise<string> {
-    return await this.runJs("return document.documentElement.outerHTML");
+    return await this.runJs(`
+      (() => {
+        const root = document.documentElement;
+        return root ? root.outerHTML : "";
+      })()
+    `);
   }
 
   async getTabText(): Promise<string> {
-    return await this.runJs("return document.documentElement.innerText");
+    return await this.runJs(`
+      (() => {
+        const root = document.documentElement;
+        const body = document.body;
+
+        if (root && typeof root.innerText === "string" && root.innerText.trim()) {
+          return root.innerText;
+        }
+
+        if (body && typeof body.innerText === "string" && body.innerText.trim()) {
+          return body.innerText;
+        }
+
+        return root?.textContent || body?.textContent || "";
+      })()
+    `);
   }
 
   loadURL(url: string): Promise<void> {
@@ -124,5 +150,13 @@ export class Tab {
 
   destroy(): void {
     this.webContentsView.webContents.close();
+  }
+
+  private async ensureIdleBrowserCompanion(): Promise<void> {
+    try {
+      await showIdleBrowserCompanion(this);
+    } catch (error) {
+      console.error("Failed to ensure idle browser companion:", error);
+    }
   }
 }

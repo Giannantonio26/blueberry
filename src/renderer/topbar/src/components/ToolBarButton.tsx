@@ -9,6 +9,7 @@ interface ToolBarButtonProps {
     onClick?: () => void;
     children?: React.ReactNode;
     className?: string;
+    title?: string;
 }
 
 export const ToolBarButton: React.FC<ToolBarButtonProps> = ({
@@ -18,9 +19,11 @@ export const ToolBarButton: React.FC<ToolBarButtonProps> = ({
     onClick,
     children,
     className,
+    title,
 }) => {
     return (
         <div
+            title={title}
             className={cn(
                 "size-8 flex items-center justify-center rounded-md",
                 "text-secondary-foreground app-region-no-drag",

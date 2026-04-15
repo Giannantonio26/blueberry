@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Segoe UI", "Inter", sans-serif;
+    background: #081120;
+    color: #eff6ff;
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .app-region-drag {
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+
+  .app-region-no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+#root {
+  height: 100vh;
+}
+
+.desktop-wallpaper {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.32), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(16, 185, 129, 0.22), transparent 24%),
+    radial-gradient(circle at 82% 82%, rgba(59, 130, 246, 0.32), transparent 26%),
+    linear-gradient(140deg, #081120 0%, #0d1c35 36%, #15365d 100%);
+}
+
+.desktop-wallpaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), transparent 72%);
+  pointer-events: none;
+}
+
+.desktop-icon-field {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.9rem 0.65rem;
+  height: 100%;
+}
+
+.desktop-click-wave {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  animation: desktop-click-wave 520ms ease-out forwards;
+  pointer-events: none;
+}
+
+.desktop-cursor {
+  transition: transform 40ms linear;
+}
+
+@keyframes desktop-click-wave {
+  0% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(6.4);
+  }
+}

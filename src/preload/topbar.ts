@@ -31,6 +31,10 @@ const topBarAPI = {
   // Sidebar
   toggleSidebar: () =>
     electronAPI.ipcRenderer.invoke("toggle-sidebar"),
+
+  // Desktop window
+  openDesktopWindow: () =>
+    electronAPI.ipcRenderer.invoke("open-desktop-window"),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

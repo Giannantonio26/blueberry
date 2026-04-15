@@ -3,6 +3,10 @@ import { electronAPI } from "@electron-toolkit/preload";
 
 interface ChatRequest {
   message: string;
+  webSearchLimits?: {
+    minWebsites: number;
+    maxWebsites: number;
+  };
   context: {
     url: string | null;
     content: string | null;
@@ -17,6 +21,19 @@ interface ChatResponse {
   isComplete: boolean;
 }
 
+interface RetrievalSourceSelectionRequest {
+  requestId: string;
+  query: string;
+  availableSourceDomains: string[];
+  defaultSelectedSourceDomains: string[];
+}
+
+interface RetrievalSourceSelectionResponse {
+  requestId: string;
+  action: "confirm" | "cancel";
+  selectedSourceDomains: string[];
+}
+
 // Sidebar specific APIs
 const sidebarAPI = {
   // Chat functionality
@@ -26,6 +43,33 @@ const sidebarAPI = {
   clearChat: () => electronAPI.ipcRenderer.invoke("sidebar-clear-chat"),
 
   getMessages: () => electronAPI.ipcRenderer.invoke("sidebar-get-messages"),
+
+  forceWriteDocuments: () =>
+    electronAPI.ipcRenderer.invoke("sidebar-force-write-docs"),
+
+  resetVectorStore: () =>
+    electronAPI.ipcRenderer.invoke("sidebar-reset-vector-store"),
+
+  viewVectorStoreChunks: () =>
+    electronAPI.ipcRenderer.invoke("sidebar-view-vector-store-chunks"),
+
+  onRetrievalSourceSelectionRequest: (
+    callback: (data: RetrievalSourceSelectionRequest) => void
+  ) => {
+    electronAPI.ipcRenderer.on(
+      "retrieval-source-selection-request",
+      (_, data) => callback(data)
+    );
+  },
+
+  respondToRetrievalSourceSelection: (
+    payload: RetrievalSourceSelectionResponse
+  ) => {
+    electronAPI.ipcRenderer.send(
+      "retrieval-source-selection-response",
+      payload
+    );
+  },
 
   onChatResponse: (callback: (data: ChatResponse) => void) => {
     electronAPI.ipcRenderer.on("chat-response", (_, data) => callback(data));
@@ -43,6 +87,12 @@ const sidebarAPI = {
 
   removeMessagesUpdatedListener: () => {
     electronAPI.ipcRenderer.removeAllListeners("chat-messages-updated");
+  },
+
+  removeRetrievalSourceSelectionRequestListener: () => {
+    electronAPI.ipcRenderer.removeAllListeners(
+      "retrieval-source-selection-request"
+    );
   },
 
   // Page content access

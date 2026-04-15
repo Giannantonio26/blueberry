@@ -8,13 +8,21 @@ interface Message {
     isStreaming?: boolean
 }
 
+interface WebSearchLimits {
+    minWebsites: number
+    maxWebsites: number
+}
+
 interface ChatContextType {
     messages: Message[]
     isLoading: boolean
 
     // Chat actions
-    sendMessage: (content: string) => Promise<void>
+    sendMessage: (content: string, webSearchLimits?: WebSearchLimits) => Promise<void>
     clearChat: () => void
+    forceWriteDocuments: () => Promise<void>
+    resetVectorStore: () => Promise<void>
+    viewVectorStoreChunks: () => Promise<void>
 
     // Page content access
     getPageContent: () => Promise<string | null>
@@ -61,7 +69,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadMessages()
     }, [])
 
-    const sendMessage = useCallback(async (content: string) => {
+    const sendMessage = useCallback(async (content: string, webSearchLimits?: WebSearchLimits) => {
         setIsLoading(true)
 
         try {
@@ -70,7 +78,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Send message to main process (which will handle context)
             await window.sidebarAPI.sendChatMessage({
                 message: content,
-                messageId: messageId
+                messageId: messageId,
+                webSearchLimits
             })
 
             // Messages will be updated via the chat-messages-updated event
@@ -87,6 +96,52 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setMessages([])
         } catch (error) {
             console.error('Failed to clear chat:', error)
+        }
+    }, [])
+
+    const forceWriteDocuments = useCallback(async () => {
+        setIsLoading(true)
+
+        try {
+            await window.sidebarAPI.forceWriteDocuments()
+        } catch (error) {
+            console.error('Failed to force write documents:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    const resetVectorStore = useCallback(async () => {
+        const shouldReset = window.confirm(
+            'Reset the vector store now? This will permanently remove indexed chunks.'
+        )
+        if (!shouldReset) {
+            return
+        }
+
+        setIsLoading(true)
+        try {
+            await window.sidebarAPI.resetVectorStore()
+        } catch (error) {
+            console.error('Failed to reset vector store:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    const viewVectorStoreChunks = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            await window.sidebarAPI.viewVectorStoreChunks()
+        } catch (error) {
+            console.error('Failed to view vector store chunks:', error)
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Could not open vector store chunk viewer.'
+            window.alert(message)
+        } finally {
+            setIsLoading(false)
         }
     }, [])
 
@@ -155,6 +210,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         sendMessage,
         clearChat,
+        forceWriteDocuments,
+        resetVectorStore,
+        viewVectorStoreChunks,
         getPageContent,
         getPageText,
         getCurrentUrl

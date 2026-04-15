@@ -1,4 +1,19 @@
-import { ipcMain, WebContents } from "electron";
+import { ipcMain, shell, WebContents } from "electron";
+import { readdir, stat } from "node:fs/promises";
+import { extname, isAbsolute, join, relative, resolve } from "node:path";
+import {
+  coerceConsultingAgentPathToDesktopRoot,
+  getConsultingAgentDesktopFolderName,
+  getConsultingAgentDesktopRootPath,
+} from "./ConsultingAgentWorkspace";
+import {
+  focusOrCreateDesktopWindow,
+  markDesktopWindowReady,
+} from "./DesktopWindowManager";
+import {
+  appendDesktopAgentDebugLog,
+  getDesktopAgentDebugLogPath,
+} from "./DesktopAgentDebugLogger";
 import type { Window } from "./Window";
 
 export class EventManager {
@@ -15,6 +30,9 @@ export class EventManager {
 
     // Sidebar events
     this.handleSidebarEvents();
+
+    // Desktop events
+    this.handleDesktopEvents();
 
     // Page content events
     this.handlePageContentEvents();
@@ -173,6 +191,214 @@ export class EventManager {
     ipcMain.handle("sidebar-get-messages", () => {
       return this.mainWindow.sidebar.client.getMessages();
     });
+
+    // Force agent to stop web search and finalize documents
+    ipcMain.handle("sidebar-force-write-docs", async () => {
+      await this.mainWindow.sidebar.client.forceWriteDocumentsNow();
+      return true;
+    });
+
+    ipcMain.handle("sidebar-reset-vector-store", async () => {
+      await this.mainWindow.sidebar.client.resetVectorStoreNow();
+      return true;
+    });
+
+    ipcMain.handle("sidebar-view-vector-store-chunks", async () => {
+      this.mainWindow.sidebar.client.openVectorStoreViewerNow();
+      return true;
+    });
+  }
+
+  private handleDesktopEvents(): void {
+    ipcMain.on("desktop-window-ready", (event) => {
+      appendDesktopAgentDebugLog("main", "desktop_window_ready", {
+        senderId: event.sender.id,
+      });
+      markDesktopWindowReady(event.sender);
+    });
+
+    ipcMain.handle("desktop-chat-message", async (_, request) => {
+      await this.mainWindow.sidebar.client.sendChatMessage(request);
+    });
+
+    ipcMain.handle("desktop-get-messages", () => {
+      return this.mainWindow.sidebar.client.getMessages();
+    });
+
+    ipcMain.on("desktop-agent-debug-log", (event, payload) => {
+      const details: Record<string, unknown> =
+        payload && typeof payload === "object"
+          ? {
+              ...(payload as Record<string, unknown>),
+              senderId: event.sender.id,
+            }
+          : { payload, senderId: event.sender.id };
+      const debugEvent =
+        typeof details.event === "string"
+          ? details.event
+          : "renderer_debug_message";
+
+      appendDesktopAgentDebugLog("renderer", debugEvent, details);
+    });
+
+    ipcMain.handle("desktop-agent-get-debug-log-path", () => {
+      return getDesktopAgentDebugLogPath();
+    });
+
+    ipcMain.handle("open-desktop-window", () => {
+      appendDesktopAgentDebugLog("main", "open_desktop_window_request");
+      focusOrCreateDesktopWindow();
+      return true;
+    });
+
+    ipcMain.handle("get-desktop-entries", async (_, targetPath?: string) => {
+      const desktopPath = this.getDesktopRootPath();
+      const currentPath = this.resolveDesktopPath(targetPath) ?? desktopPath;
+      appendDesktopAgentDebugLog("main", "get_desktop_entries_start", {
+        targetPath: targetPath ?? null,
+        resolvedPath: currentPath,
+      });
+
+      try {
+        const entries = await readdir(currentPath, { withFileTypes: true });
+        const desktopEntries = entries
+          .filter((entry) => entry.isDirectory() || entry.isFile())
+          .map((entry) => ({
+            name: entry.name,
+            path: join(currentPath, entry.name),
+            kind: entry.isDirectory() ? "directory" : "file",
+            extension: entry.isFile() ? extname(entry.name).replace(/^\./, "") : "",
+          }))
+          .sort((a, b) => {
+            if (a.kind !== b.kind) {
+              return a.kind === "directory" ? -1 : 1;
+            }
+
+            return a.name.localeCompare(b.name);
+          });
+
+        appendDesktopAgentDebugLog("main", "get_desktop_entries_result", {
+          resolvedPath: currentPath,
+          entryCount: desktopEntries.length,
+          entriesPreview: desktopEntries.slice(0, 8).map((entry) => ({
+            name: entry.name,
+            kind: entry.kind,
+          })),
+        });
+
+        return {
+          desktopPath,
+          currentPath,
+          parentPath:
+            currentPath === desktopPath
+              ? null
+              : this.resolveDesktopPath(join(currentPath, "..")),
+          breadcrumbs: this.buildDesktopBreadcrumbs(desktopPath, currentPath),
+          entries: desktopEntries,
+        };
+      } catch (error) {
+        console.error("Error reading desktop entries:", error);
+        appendDesktopAgentDebugLog("main", "get_desktop_entries_error", {
+          targetPath: targetPath ?? null,
+          resolvedPath: currentPath,
+          error,
+        });
+
+        return {
+          desktopPath,
+          currentPath,
+          parentPath:
+            currentPath === desktopPath
+              ? null
+              : this.resolveDesktopPath(join(currentPath, "..")),
+          breadcrumbs: this.buildDesktopBreadcrumbs(desktopPath, currentPath),
+          entries: [],
+        };
+      }
+    });
+
+    ipcMain.handle("open-desktop-file", async (_, filePath: string) => {
+      const resolvedFilePath = this.resolveDesktopPath(filePath);
+      appendDesktopAgentDebugLog("main", "open_desktop_file_start", {
+        requestedPath: filePath,
+        resolvedPath: resolvedFilePath,
+      });
+      if (!resolvedFilePath) {
+        return false;
+      }
+
+      try {
+        const fileStats = await stat(resolvedFilePath);
+        if (!fileStats.isFile()) {
+          return false;
+        }
+      } catch (error) {
+        console.error("Error reading desktop file metadata:", error);
+        appendDesktopAgentDebugLog("main", "open_desktop_file_error", {
+          requestedPath: filePath,
+          resolvedPath: resolvedFilePath,
+          error,
+        });
+        return false;
+      }
+
+      const result = await shell.openPath(resolvedFilePath);
+      appendDesktopAgentDebugLog("main", "open_desktop_file_result", {
+        requestedPath: filePath,
+        resolvedPath: resolvedFilePath,
+        success: result === "",
+        shellResult: result,
+      });
+      return result === "";
+    });
+  }
+
+  private getDesktopRootPath(): string {
+    return getConsultingAgentDesktopRootPath();
+  }
+
+  private resolveDesktopPath(targetPath?: string): string | null {
+    const desktopPath = this.getDesktopRootPath();
+    const resolvedTargetPath = coerceConsultingAgentPathToDesktopRoot(
+      resolve(targetPath ?? desktopPath),
+      desktopPath
+    );
+    const relativePath = relative(desktopPath, resolvedTargetPath);
+
+    if (relativePath.startsWith("..") || isAbsolute(relativePath)) {
+      return null;
+    }
+
+    return resolvedTargetPath;
+  }
+
+  private buildDesktopBreadcrumbs(
+    desktopPath: string,
+    currentPath: string
+  ): Array<{ name: string; path: string }> {
+    const relativePath = relative(desktopPath, currentPath);
+    const segments = relativePath
+      .split(/[\\/]+/)
+      .filter(Boolean);
+
+    const breadcrumbs = [
+      {
+        name: getConsultingAgentDesktopFolderName(),
+        path: desktopPath,
+      },
+    ];
+
+    let accumulatedPath = desktopPath;
+
+    for (const segment of segments) {
+      accumulatedPath = join(accumulatedPath, segment);
+      breadcrumbs.push({
+        name: segment,
+        path: accumulatedPath,
+      });
+    }
+
+    return breadcrumbs;
   }
 
   private handlePageContentEvents(): void {

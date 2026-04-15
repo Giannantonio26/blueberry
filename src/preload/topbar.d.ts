@@ -28,6 +28,9 @@ interface TopBarAPI {
 
   // Sidebar
   toggleSidebar: () => Promise<void>;
+
+  // Desktop window
+  openDesktopWindow: () => Promise<boolean>;
 }
 
 declare global {

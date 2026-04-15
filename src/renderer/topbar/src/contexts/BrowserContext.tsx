@@ -27,6 +27,9 @@ interface BrowserContextType {
     // Tab actions
     takeScreenshot: (tabId: string) => Promise<string | null>
     runJavaScript: (tabId: string, code: string) => Promise<any>
+
+    // Desktop window
+    openDesktopWindow: () => Promise<void>
 }
 
 const BrowserContext = createContext<BrowserContextType | null>(null)
@@ -156,6 +159,14 @@ export const BrowserProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     }, [])
 
+    const openDesktopWindow = useCallback(async () => {
+        try {
+            await window.topBarAPI.openDesktopWindow()
+        } catch (error) {
+            console.error('Failed to open desktop window:', error)
+        }
+    }, [])
+
     // Initialize tabs on mount
     useEffect(() => {
         refreshTabs()
@@ -180,7 +191,8 @@ export const BrowserProvider: React.FC<{ children: React.ReactNode }> = ({ child
         goForward,
         reload,
         takeScreenshot,
-        runJavaScript
+        runJavaScript,
+        openDesktopWindow
     }
 
     return (

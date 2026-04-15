@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, ArrowRight, RefreshCw, Loader2, PanelLeftClose, PanelLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight, RefreshCw, Loader2, Monitor, PanelLeftClose, PanelLeft } from 'lucide-react'
 import { useBrowser } from '../contexts/BrowserContext'
 import { ToolBarButton } from '../components/ToolBarButton'
 import { Favicon } from '../components/Favicon'
@@ -7,7 +7,7 @@ import { DarkModeToggle } from '../components/DarkModeToggle'
 import { cn } from '@common/lib/utils'
 
 export const AddressBar: React.FC = () => {
-    const { activeTab, navigateToUrl, goBack, goForward, reload, isLoading } = useBrowser()
+    const { activeTab, navigateToUrl, goBack, goForward, reload, isLoading, openDesktopWindow } = useBrowser()
     const [url, setUrl] = useState('')
     const [isEditing, setIsEditing] = useState(false)
     const [isFocused, setIsFocused] = useState(false)
@@ -198,9 +198,15 @@ export const AddressBar: React.FC = () => {
             <div className="flex items-center gap-1 app-region-no-drag">
                 <DarkModeToggle />
                 <ToolBarButton
+                    Icon={Monitor}
+                    onClick={() => void openDesktopWindow()}
+                    title="Open desktop view"
+                />
+                <ToolBarButton
                     Icon={isSidebarOpen ? PanelLeftClose : PanelLeft}
                     onClick={toggleSidebar}
                     toggled={isSidebarOpen}
+                    title="Toggle sidebar"
                 />
             </div>
         </>
