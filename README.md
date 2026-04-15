@@ -1,7 +1,19 @@
 
 
-# Blueberry Browser
+## Blueberry Browser
+[Tutorial News Research](./resources/Tutorial_News_Research.mp4)
 
+The above video tutorials show two main blueberry use cases:
+
+### Competitor Analysis
+
+### News Research
+It shows how blueberry can autonomously plan, reason and research critically the latest web news from different sources. Especially, it shows how it can explore the files in the sandbox folder (blueberry), in this case, it finds an already exisiting relevant file to the request, it converts the .docx file into a .pdf file format and update the file content with the latest news as user requested
+
+
+
+
+   
 
 
 ## 🚀 Project Setup
