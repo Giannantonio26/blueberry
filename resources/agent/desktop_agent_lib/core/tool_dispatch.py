@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from typing import Any
@@ -9,6 +9,11 @@ from ..runtime import AgentRuntime
 
 
 def normalize_tool_arguments(arguments: Any) -> dict[str, Any]:
+    """
+    Normalize tool arguments into a canonical form for downstream logic.
+    Key behavior: parses JSON payloads and raises explicit errors on invalid or unsupported states.
+    Returns a structured mapping with operation details.
+    """
     if arguments is None:
         return {}
 
@@ -25,6 +30,11 @@ def normalize_tool_arguments(arguments: Any) -> dict[str, Any]:
 
 
 def execute_host_tool_request(tool_name: str, arguments: dict[str, Any]) -> ToolResult:
+    """
+    Execute host tool request.
+    Key behavior: serializes JSON payloads, exchanges protocol messages with the host runtime, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+    Returns a `ToolResult` payload for the runtime tool pipeline.
+    """
     request_id = f"host-tool-{tool_name}-{abs(hash(json.dumps(arguments, sort_keys=True, ensure_ascii=True))) % 10_000_000}"
     emit_protocol_message(
         {
@@ -65,6 +75,11 @@ def execute_host_tool_request(tool_name: str, arguments: dict[str, Any]) -> Tool
 
 
 def parse_tool_result_content(content: str) -> dict[str, Any]:
+    """
+    Parse tool result content.
+    Key behavior: parses JSON payloads.
+    Returns a structured mapping with operation details.
+    """
     try:
         parsed = json.loads(content)
     except json.JSONDecodeError:
@@ -74,6 +89,11 @@ def parse_tool_result_content(content: str) -> dict[str, Any]:
 
 
 def execute_tool(runtime: AgentRuntime, tool_name: str, arguments: dict[str, Any]) -> ToolResult:
+    """
+    Execute tool.
+    Key behavior: exchanges protocol messages with the host runtime and raises explicit errors on invalid or unsupported states.
+    Returns a `ToolResult` payload for the runtime tool pipeline.
+    """
     if tool_name == "read_web_page":
         return runtime.read_web_page(ReadWebPageArgs.model_validate(arguments))
     if tool_name == "google_search_and_collect":

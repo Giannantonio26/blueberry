@@ -42,6 +42,11 @@ SUPPORTED_CONVERSION_FORMATS = {".docx", ".txt", ".md", ".csv", ".xlsx", ".pdf",
 UNSUPPORTED_GENERATED_TEXT_SUFFIXES = {".json", ".html", ".htm", ".xml"}
 
 def sanitize_filename_stem(value: str, fallback: str) -> str:
+    """
+    Sanitize filename stem into a safe, normalized representation.
+    Key behavior: applies regex-based parsing or normalization, strips known extensions and invalid filename characters, and enforces a bounded filename length.
+    Returns the resulting text value.
+    """
     cleaned = (value or "").strip()
     lowered = cleaned.lower()
     for suffix in sorted(KNOWN_FILE_SUFFIXES, key=len, reverse=True):
@@ -55,6 +60,11 @@ def sanitize_filename_stem(value: str, fallback: str) -> str:
 
 
 def infer_text_file_suffix(latest_user_request: str) -> str:
+    """
+    Infer text file suffix.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns the resulting text value.
+    """
     normalized = latest_user_request.lower()
     suffix_hints: list[tuple[str, str]] = [
         (r"(?:^|\W)\.md(?:$|\W)|\bmarkdown\b", ".md"),
@@ -85,6 +95,10 @@ def build_fallback_filename_stem(
     sheets: list[Any] | None = None,
     slides: list[Any] | None = None,
 ) -> str:
+    """
+    Build fallback filename stem.
+    Returns the resulting text value.
+    """
     candidate_parts: list[str] = []
 
     if isinstance(title, str) and title.strip():
@@ -138,6 +152,11 @@ def infer_file_name(
     sheets: list[Any] | None = None,
     slides: list[Any] | None = None,
 ) -> str:
+    """
+    Infer file name.
+    Key behavior: serializes JSON payloads and calls the configured LLM endpoint.
+    Returns the resulting text value.
+    """
     history_excerpt = "\n".join(
         f"{message.role}: {message.content.strip()}"
         for message in runtime.agent_input.messages[-6:]
@@ -282,7 +301,15 @@ def build_automatic_file_path(
     sheets: list[Any] | None = None,
     slides: list[Any] | None = None,
 ) -> str:
+    """
+    Build automatic file path.
+    Returns the resulting text value.
+    """
     def is_multi_file_output_request() -> bool:
+        """
+        Check whether multi file output request.
+        Returns `True` when the condition is satisfied, otherwise `False`.
+        """
         if runtime.required_desktop_action_kind != "write_output":
             return False
         if runtime.requested_output_count is not None:
@@ -290,6 +317,10 @@ def build_automatic_file_path(
         return len(runtime.expected_output_extensions) > 1
 
     def resolve_shared_output_folder(suggested_stem: str) -> str:
+        """
+        Resolve shared output folder.
+        Returns the resulting text value.
+        """
         cached_folder = (runtime.preferred_output_folder or "").strip()
         if cached_folder:
             return cached_folder
@@ -322,6 +353,10 @@ def build_automatic_file_path(
             counter += 1
 
     def raw_path_needs_folder_placement(raw_value: str) -> bool:
+        """
+        Handle raw path needs folder placement for the current workflow.
+        Returns a boolean status for the requested check or operation.
+        """
         normalized = raw_value.strip()
         if not normalized:
             return False
@@ -394,6 +429,10 @@ def build_automatic_file_path(
 
 
 def get_expected_suffix_for_file_action(file_action: str) -> str | None:
+    """
+    Return expected suffix for file action.
+    Returns a `str | None` result.
+    """
     if file_action == "write_txt_file":
         return ".txt"
     if file_action == "write_markdown_file":
@@ -412,6 +451,11 @@ def get_expected_suffix_for_file_action(file_action: str) -> str | None:
 
 
 def file_type_to_file_action(file_type: str) -> str:
+    """
+    Handle file type to file action for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns the resulting text value.
+    """
     mapping = {
         "text": "write_text_file",
         "txt": "write_txt_file",
@@ -440,6 +484,11 @@ def plan_output_path_for_file_action(
     slides: list[Any] | None = None,
     reserved_paths: set[str] | None = None,
 ) -> str:
+    """
+    Handle plan output path for file action for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns the resulting text value.
+    """
     planned_raw_path = build_automatic_file_path(
         runtime,
         file_action,

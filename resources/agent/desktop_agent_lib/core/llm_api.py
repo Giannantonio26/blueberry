@@ -16,6 +16,10 @@ OPENAI_CHAT_COMPLETIONS_SUFFIX = "/chat/completions"
 
 
 def build_llm_headers(api_key: str) -> dict[str, str]:
+    """
+    Build LLM headers.
+    Returns a structured mapping with operation details.
+    """
     return {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
@@ -23,6 +27,10 @@ def build_llm_headers(api_key: str) -> dict[str, str]:
 
 
 def _is_openai_compatible_chat_url(base_url: str) -> bool:
+    """
+    Check whether openai compatible chat URL.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = base_url.strip().lower()
     return (
         "generativelanguage.googleapis.com" in normalized
@@ -34,6 +42,11 @@ def _is_openai_compatible_chat_url(base_url: str) -> bool:
 
 
 def derive_llm_endpoint_url(base_url: str, endpoint: str) -> str:
+    """
+    Handle derive LLM endpoint URL for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns the resulting text value.
+    """
     parsed = urlsplit(base_url)
     normalized_endpoint = endpoint.strip().lstrip("/")
     if not normalized_endpoint:
@@ -50,6 +63,11 @@ def derive_llm_endpoint_url(base_url: str, endpoint: str) -> str:
 
 
 def derive_openai_compatible_endpoint_url(base_url: str, endpoint: str) -> str:
+    """
+    Handle derive openai compatible endpoint URL for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns the resulting text value.
+    """
     parsed = urlsplit(base_url)
     normalized_endpoint = endpoint.strip().lstrip("/")
     if not normalized_endpoint:
@@ -70,6 +88,10 @@ def derive_openai_compatible_endpoint_url(base_url: str, endpoint: str) -> str:
 
 
 def _parse_retry_after_seconds(raw_retry_after: str | None) -> float | None:
+    """
+    Parse retry after seconds.
+    Returns a `float | None` result.
+    """
     if not raw_retry_after:
         return None
 
@@ -99,6 +121,10 @@ def _compute_retry_delay_seconds(
     *,
     retry_after_seconds: float | None = None,
 ) -> float:
+    """
+    Handle compute retry delay seconds for the current workflow.
+    Returns a `float` result.
+    """
     if retry_after_seconds is not None:
         return retry_after_seconds
 
@@ -108,6 +134,11 @@ def _compute_retry_delay_seconds(
 
 
 def _extract_error_message(response_body: str) -> str | None:
+    """
+    Extract error message.
+    Key behavior: parses JSON payloads.
+    Returns a `str | None` result.
+    """
     if not response_body:
         return None
 
@@ -139,6 +170,11 @@ def post_llm_json(
     *,
     timeout: int = 180,
 ) -> dict[str, Any]:
+    """
+    Handle post LLM JSON for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns a structured mapping with operation details.
+    """
     last_error: Exception | None = None
 
     for attempt in range(MAX_LLM_REQUEST_ATTEMPTS):
@@ -201,6 +237,10 @@ def post_llm_json(
 
 
 def _coerce_openai_content(raw_content: Any) -> str:
+    """
+    Coerce openai content.
+    Returns the resulting text value.
+    """
     if isinstance(raw_content, str):
         return raw_content
 
@@ -221,6 +261,11 @@ def _coerce_openai_content(raw_content: Any) -> str:
 
 
 def _coerce_openai_tool_arguments(raw_arguments: Any) -> str:
+    """
+    Coerce openai tool arguments.
+    Key behavior: serializes JSON payloads.
+    Returns the resulting text value.
+    """
     if isinstance(raw_arguments, str):
         return raw_arguments
 
@@ -234,6 +279,10 @@ def _coerce_openai_tool_arguments(raw_arguments: Any) -> str:
 
 
 def _coerce_openai_json_value(raw_value: Any) -> Any:
+    """
+    Coerce openai JSON value.
+    Returns a `Any` result.
+    """
     if raw_value is None or isinstance(raw_value, (str, int, float, bool)):
         return raw_value
 
@@ -249,6 +298,10 @@ def _coerce_openai_json_value(raw_value: Any) -> Any:
 
 
 def _normalize_model_name(raw_model_name: Any) -> str:
+    """
+    Normalize model name into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     if not isinstance(raw_model_name, str):
         return ""
 
@@ -259,6 +312,10 @@ def _normalize_model_name(raw_model_name: Any) -> str:
 
 
 def _requires_gemini_tool_thought_signatures(raw_model_name: Any) -> bool:
+    """
+    Handle requires gemini tool thought signatures for the current workflow.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized_model_name = _normalize_model_name(raw_model_name)
     return normalized_model_name.startswith("gemini-3")
 
@@ -266,6 +323,10 @@ def _requires_gemini_tool_thought_signatures(raw_model_name: Any) -> bool:
 def _extract_google_thought_signature(
     raw_call: dict[str, Any], normalized_function: dict[str, Any]
 ) -> str | None:
+    """
+    Extract google thought signature.
+    Returns a `str | None` result.
+    """
     raw_extra_content = raw_call.get("extra_content")
     if isinstance(raw_extra_content, dict):
         raw_google_content = raw_extra_content.get("google")
@@ -298,6 +359,10 @@ def _normalize_openai_tool_calls(
     *,
     require_google_tool_thought_signatures: bool = False,
 ) -> list[dict[str, Any]]:
+    """
+    Normalize openai tool calls into a canonical form for downstream logic.
+    Returns an ordered collection of computed items.
+    """
     if not isinstance(raw_tool_calls, list):
         return []
 
@@ -374,6 +439,11 @@ def _normalize_openai_messages(
     *,
     require_google_tool_thought_signatures: bool = False,
 ) -> list[dict[str, Any]]:
+    """
+    Normalize openai messages into a canonical form for downstream logic.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns an ordered collection of computed items.
+    """
     if not isinstance(raw_messages, list):
         raise RuntimeError("LLM payload is missing a valid messages list.")
 
@@ -447,6 +517,10 @@ def _normalize_openai_messages(
 
 
 def _build_openai_chat_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Build openai chat payload.
+    Returns a structured mapping with operation details.
+    """
     converted_payload: dict[str, Any] = {}
     require_google_tool_thought_signatures = _requires_gemini_tool_thought_signatures(
         payload.get("model")
@@ -504,6 +578,10 @@ def _build_openai_chat_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _normalize_openai_chat_content(raw_content: Any) -> str:
+    """
+    Normalize openai chat content into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     if isinstance(raw_content, str):
         return raw_content
 
@@ -521,6 +599,11 @@ def _normalize_openai_chat_content(raw_content: Any) -> str:
 
 
 def _normalize_openai_chat_response(response: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize openai chat response into a canonical form for downstream logic.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns a structured mapping with operation details.
+    """
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices:
         raise RuntimeError("LLM API returned an invalid chat response payload.")
@@ -541,6 +624,11 @@ def _normalize_openai_chat_response(response: dict[str, Any]) -> dict[str, Any]:
 
 
 def call_llm(api_key: str, base_url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Handle call LLM for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns a structured mapping with operation details.
+    """
     normalized_base_url = base_url.strip()
     if not normalized_base_url:
         raise ValueError("LLM base URL cannot be empty.")
@@ -577,6 +665,10 @@ def call_llm(api_key: str, base_url: str, payload: dict[str, Any]) -> dict[str, 
 def _parse_openai_embeddings(
     response: dict[str, Any], expected_count: int
 ) -> list[list[float]] | None:
+    """
+    Parse openai embeddings.
+    Returns an ordered collection of computed items.
+    """
     raw_data = response.get("data")
     if not isinstance(raw_data, list):
         return None
@@ -607,6 +699,11 @@ def embed_with_llm(
     model: str,
     inputs: list[str],
 ) -> list[list[float]]:
+    """
+    Handle embed with LLM for the current workflow.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Returns an ordered collection of computed items.
+    """
     normalized_inputs = [text for text in inputs if text.strip()]
     if not normalized_inputs:
         return []

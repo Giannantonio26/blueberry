@@ -9,6 +9,11 @@ from ..planning.file_planning import SUPPORTED_CONVERSION_FORMATS
 
 class ConversionPathMixin:
     def normalize_conversion_target_format(self, target_format: str) -> str:
+        """
+        Normalize conversion target format into a canonical form for downstream logic.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns the resulting text value.
+        """
         normalized = target_format.strip().lower().lstrip(".")
         aliases = {
             "word": "docx",
@@ -39,6 +44,11 @@ class ConversionPathMixin:
         target_format: str,
         output_path: str | None = None,
     ) -> tuple[Path, str]:
+        """
+        Return conversion output path.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a resolved filesystem path value.
+        """
         source_file_path = self.resolve_desktop_path(source_path)
         target_suffix = self.normalize_conversion_target_format(target_format)
 
@@ -57,6 +67,10 @@ class ConversionPathMixin:
         return self.resolve_unique_file_path(output_file_path), target_suffix
 
     def build_conversion_text_from_sheets(self, sheets: list[ExcelSheet]) -> str:
+        """
+        Build conversion text from sheets.
+        Returns the resulting text value.
+        """
         sections: list[str] = []
         include_sheet_headings = len(sheets) > 1
 
@@ -73,6 +87,10 @@ class ConversionPathMixin:
         return "\n\n".join(section for section in sections if section.strip()).strip()
 
     def build_conversion_markdown_from_sheets(self, sheets: list[ExcelSheet]) -> str:
+        """
+        Build conversion markdown from sheets.
+        Returns the resulting text value.
+        """
         sections: list[str] = []
         include_sheet_headings = len(sheets) > 1
 
@@ -91,6 +109,10 @@ class ConversionPathMixin:
     def chunk_conversion_lines(
         self, lines: list[str], *, max_lines_per_chunk: int
     ) -> list[list[str]]:
+        """
+        Handle chunk conversion lines for the current workflow.
+        Returns an ordered collection of computed items.
+        """
         cleaned_lines = [line.strip() for line in lines if line.strip()]
         if not cleaned_lines:
             return [[]]
@@ -105,6 +127,10 @@ class ConversionPathMixin:
         presentation_title: str,
         source_text: str,
     ) -> list[PowerPointSlide]:
+        """
+        Build conversion slides from text.
+        Returns an ordered collection of computed items.
+        """
         raw_lines = [
             segment.strip()
             for segment in re.split(r"\r?\n+", source_text)
@@ -129,6 +155,10 @@ class ConversionPathMixin:
         sheets: list[ExcelSheet],
         presentation_title: str,
     ) -> list[PowerPointSlide]:
+        """
+        Build conversion slides from sheets.
+        Returns an ordered collection of computed items.
+        """
         slides: list[PowerPointSlide] = []
         include_sheet_names = len(sheets) > 1
 

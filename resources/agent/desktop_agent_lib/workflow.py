@@ -67,6 +67,10 @@ EXTENSION_TO_WRITE_TOOL = {
 
 
 def format_visited_websites_for_iteration(visited_websites: dict[str, str]) -> str:
+    """
+    Format visited websites for iteration.
+    Returns the resulting text value.
+    """
     formatted_entries: list[str] = []
     for url, title in visited_websites.items():
         normalized_url = url.strip()
@@ -79,6 +83,10 @@ def format_visited_websites_for_iteration(visited_websites: dict[str, str]) -> s
 
 
 def resolve_configured_web_search_limits(agent_input: AgentInput) -> tuple[int, int]:
+    """
+    Resolve configured web search limits.
+    Returns a `tuple[int, int]` result.
+    """
     configured_min = agent_input.web_search_limits.min_websites
     configured_max = agent_input.web_search_limits.max_websites
 
@@ -108,6 +116,10 @@ def build_react_iteration_messages(
     visited_websites: dict[str, str],
     force_write_outputs: bool,
 ) -> list[dict[str, str | list[Any]]]:
+    """
+    Build react iteration messages.
+    Returns an ordered collection of computed items.
+    """
     visited_websites_context = format_visited_websites_for_iteration(visited_websites)
     sections = [
         f"""You are in ReAct iteration {step_number}.
@@ -175,6 +187,10 @@ Current constraints:
 
 
 def build_final_messages(conversation_messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Build final messages.
+    Returns an ordered collection of computed items.
+    """
     final_instruction = """
 Return only JSON matching the provided schema.
 
@@ -202,6 +218,10 @@ Guidance:
 
 
 def build_pending_desktop_action_user_message(runtime: AgentRuntime) -> str:
+    """
+    Build pending desktop action user message.
+    Returns the resulting text value.
+    """
     required_action = runtime.required_desktop_action_kind
     if required_action == "write_output":
         return "The requested Desktop output file has not been created yet."
@@ -215,6 +235,10 @@ def build_pending_desktop_action_user_message(runtime: AgentRuntime) -> str:
 
 
 def format_pending_write_tool_guidance(runtime: AgentRuntime) -> str:
+    """
+    Format pending write tool guidance.
+    Returns the resulting text value.
+    """
     pending_extensions = sorted(runtime.expected_output_extensions)
     if not pending_extensions:
         return (
@@ -241,6 +265,10 @@ def format_pending_write_tool_guidance(runtime: AgentRuntime) -> str:
 
 
 def plan_iteration_cap_recovery_steps(runtime: AgentRuntime) -> int:
+    """
+    Handle plan iteration cap recovery steps for the current workflow.
+    Returns a `int` result.
+    """
     remaining_output_count = runtime.remaining_requested_output_count()
     if remaining_output_count is None:
         remaining_output_count = (
@@ -258,6 +286,10 @@ def plan_iteration_cap_recovery_steps(runtime: AgentRuntime) -> int:
 def build_iteration_cap_recovery_system_message(
     runtime: AgentRuntime, steps_left: int
 ) -> str:
+    """
+    Build iteration cap recovery system message.
+    Returns the resulting text value.
+    """
     return (
         f"Iteration-cap recovery mode is active ({steps_left} turn(s) left). "
         "Execution only: no web search, no exploratory loops, and no repeated inspection of the same folder or file. "
@@ -271,6 +303,10 @@ def build_iteration_cap_recovery_system_message(
 
 
 def build_pending_desktop_action_system_message(runtime: AgentRuntime) -> str:
+    """
+    Build pending desktop action system message.
+    Returns the resulting text value.
+    """
     required_action = runtime.required_desktop_action_kind
     if required_action == "write_output":
         if runtime.retrieval_ready_for_write:
@@ -348,6 +384,10 @@ def build_pending_desktop_action_system_message(runtime: AgentRuntime) -> str:
 
 
 def looks_like_clarification_question(message_content: str) -> bool:
+    """
+    Check whether like clarification question.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     normalized = message_content.strip()
     if not normalized:
         return False
@@ -373,6 +413,10 @@ def looks_like_clarification_question(message_content: str) -> bool:
 
 
 def looks_like_source_request_clarification(message_content: str) -> bool:
+    """
+    Check whether like source request clarification.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     normalized = " ".join(message_content.split()).strip()
     if not normalized:
         return False
@@ -407,6 +451,10 @@ def looks_like_source_request_clarification(message_content: str) -> bool:
 
 
 def is_recoverable_write_error_message(message: str) -> bool:
+    """
+    Check whether recoverable write error message.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     normalized = " ".join((message or "").split()).lower()
     if not normalized:
         return False
@@ -424,6 +472,10 @@ def is_recoverable_write_error_message(message: str) -> bool:
 
 
 def is_allowed_desktop_creation_confirmation(message_content: str) -> bool:
+    """
+    Check whether allowed desktop creation confirmation.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     normalized = " ".join(message_content.split()).strip().lower()
     if not normalized or "?" not in normalized:
         return False
@@ -458,6 +510,11 @@ def is_allowed_desktop_creation_confirmation(message_content: str) -> bool:
 
 
 def user_explicitly_requires_named_source(user_request: str) -> bool:
+    """
+    Handle user explicitly requires named source for the current workflow.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = " ".join(user_request.split()).strip()
     if not normalized:
         return False
@@ -480,6 +537,10 @@ def user_explicitly_requires_named_source(user_request: str) -> bool:
 
 
 def request_likely_requires_web_research(user_request: str) -> bool:
+    """
+    Request likely requires web research.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = " ".join(user_request.split()).strip().lower()
     if not normalized:
         return False
@@ -491,6 +552,11 @@ def request_likely_requires_web_research(user_request: str) -> bool:
 
 
 def build_stall_recovery_search_query(user_request: str) -> str:
+    """
+    Build stall recovery search query.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns the resulting text value.
+    """
     stop_words = {
         "the",
         "and",
@@ -526,6 +592,10 @@ def build_stall_recovery_search_query(user_request: str) -> str:
 
 
 def normalize_error_message(error: Exception, *, max_length: int = 260) -> str:
+    """
+    Normalize error message into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     normalized = " ".join(str(error).split()).strip()
     if not normalized:
         return "unknown error"
@@ -535,6 +605,10 @@ def normalize_error_message(error: Exception, *, max_length: int = 260) -> str:
 
 
 def is_llm_server_error(error: Exception) -> bool:
+    """
+    Check whether LLM server error.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     normalized = normalize_error_message(error, max_length=500).lower()
     server_error_markers = (
         "llm api returned a server error",
@@ -555,6 +629,10 @@ def build_server_error_retry_system_message(
     retry_number: int,
     max_retries: int,
 ) -> str:
+    """
+    Build server error retry system message.
+    Returns the resulting text value.
+    """
     return (
         "The latest request could not be completed due to a server error from the LLM API. "
         "Start a new iteration now and continue from the current context. "
@@ -567,6 +645,10 @@ def build_final_retry_messages(
     conversation_messages: list[dict[str, Any]],
     forbidden_message: str,
 ) -> list[dict[str, Any]]:
+    """
+    Build final retry messages.
+    Returns an ordered collection of computed items.
+    """
     correction = (
         "The previous final response asked the user to provide a source, article, website, URL, or link. "
         "That is not allowed here because the user did not explicitly require a named source. "
@@ -589,6 +671,10 @@ def append_tool_result_message(
     content: str,
     tool_call_id: str | None = None,
 ) -> None:
+    """
+    Append tool result message.
+    Performs side effects and returns no value.
+    """
     normalized_content = content if isinstance(content, str) else str(content)
     if tool_call_id and tool_call_id.strip():
         messages.append(
@@ -609,6 +695,11 @@ def append_tool_result_message(
 
 
 def parse_tool_result_payload(result: ToolResult) -> dict[str, Any]:
+    """
+    Parse tool result payload.
+    Key behavior: parses JSON payloads.
+    Returns a structured mapping with operation details.
+    """
     try:
         parsed_payload = json.loads(result.content)
     except json.JSONDecodeError:
@@ -617,6 +708,11 @@ def parse_tool_result_payload(result: ToolResult) -> dict[str, Any]:
 
 
 def coerce_final_payload(final_content: str) -> dict[str, Any]:
+    """
+    Coerce final payload.
+    Key behavior: parses JSON payloads.
+    Returns a structured mapping with operation details.
+    """
     if not final_content:
         return {}
 
@@ -637,6 +733,10 @@ def coerce_final_payload(final_content: str) -> dict[str, Any]:
 def synthesize_final_message(
     parsed_payload: dict[str, Any], runtime: AgentRuntime
 ) -> str:
+    """
+    Handle synthesize final message for the current workflow.
+    Returns the resulting text value.
+    """
     latest_user_request = get_latest_user_message(runtime.agent_input.messages)
 
     if not runtime.required_desktop_action_satisfied():
@@ -682,6 +782,11 @@ def synthesize_final_message(
 def update_runtime_research_state_from_tool_result(
     runtime: AgentRuntime, tool_name: str, result: ToolResult
 ) -> None:
+    """
+    Update runtime research state from tool result.
+    Key behavior: parses JSON payloads.
+    Performs side effects and returns no value.
+    """
     if tool_name != "google_search_and_collect":
         return
 
@@ -713,6 +818,10 @@ def update_runtime_research_state_from_tool_result(
     def ingest_source_payload(
         payload: dict[str, Any], *, query: str | None = None, purpose: str | None = None
     ) -> None:
+        """
+        Handle ingest source payload for the current workflow.
+        Performs side effects and returns no value.
+        """
         nonlocal ingestion_attempts, ingestion_successes
 
         text_content = payload.get("text_content")
@@ -805,6 +914,10 @@ def update_runtime_research_state_from_tool_result(
 
 
 def build_runtime_error_result(error: Exception, runtime: AgentRuntime | None) -> AgentFinal:
+    """
+    Build runtime error result.
+    Returns a `AgentFinal` result.
+    """
     if runtime and runtime.changed_paths:
         if len(runtime.changed_paths) == 1:
             progress_message = f"I updated {runtime.changed_paths[-1]}"
@@ -834,6 +947,10 @@ def build_runtime_error_result(error: Exception, runtime: AgentRuntime | None) -
 
 
 def parse_final_result(final_content: str, runtime: AgentRuntime) -> AgentFinal:
+    """
+    Parse final result.
+    Returns a `AgentFinal` result.
+    """
     parsed_payload = coerce_final_payload(final_content)
 
     message = parsed_payload.get("message")
@@ -862,6 +979,11 @@ def parse_final_result(final_content: str, runtime: AgentRuntime) -> AgentFinal:
 
 
 def main() -> None:
+    """
+    Run the main entry-point workflow for this module.
+    Key behavior: parses JSON payloads, serializes JSON payloads, calls the configured LLM endpoint, exchanges protocol messages with the host runtime, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+    Performs side effects and returns no value.
+    """
     runtime: AgentRuntime | None = None
 
     try:

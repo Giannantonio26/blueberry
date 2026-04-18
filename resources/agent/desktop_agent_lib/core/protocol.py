@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import sys
@@ -6,11 +6,21 @@ from typing import Any
 
 
 def emit_protocol_message(payload: dict[str, Any]) -> None:
+    """
+    Handle emit protocol message for the current workflow.
+    Key behavior: serializes JSON payloads.
+    Performs side effects and returns no value.
+    """
     sys.stdout.write(json.dumps(payload, ensure_ascii=True) + "\n")
     sys.stdout.flush()
 
 
 def read_protocol_message() -> dict[str, Any]:
+    """
+    Read protocol message.
+    Key behavior: parses JSON payloads.
+    Returns a structured mapping with operation details.
+    """
     line = sys.stdin.readline()
     if not line:
         return {}
@@ -24,6 +34,10 @@ def read_protocol_message() -> dict[str, Any]:
 
 
 def get_file_creation_label(tool_name: str) -> str:
+    """
+    Return file creation label.
+    Returns the resulting text value.
+    """
     if tool_name == "write_txt_file":
         return "Creating TXT file"
     if tool_name == "write_markdown_file":
@@ -52,6 +66,11 @@ def get_file_creation_label(tool_name: str) -> str:
 
 
 def request_file_confirmation(tool_name: str, path: str) -> bool:
+    """
+    Request file confirmation.
+    Key behavior: exchanges protocol messages with the host runtime.
+    Returns a boolean status for the requested check or operation.
+    """
     emit_protocol_message(
         {
             "type": "event",
@@ -68,6 +87,11 @@ def request_file_confirmation(tool_name: str, path: str) -> bool:
 
 
 def emit_tool_call(tool_name: str, arguments: dict[str, Any]) -> None:
+    """
+    Handle emit tool call for the current workflow.
+    Key behavior: exchanges protocol messages with the host runtime.
+    Performs side effects and returns no value.
+    """
     emit_protocol_message(
         {
             "type": "event",
@@ -79,6 +103,10 @@ def emit_tool_call(tool_name: str, arguments: dict[str, Any]) -> None:
 
 
 def tool_requires_file_confirmation(tool_name: str) -> bool:
+    """
+    Handle tool requires file confirmation for the current workflow.
+    Returns a boolean status for the requested check or operation.
+    """
     return tool_name in {
         "write_text_file",
         "write_txt_file",
@@ -96,6 +124,10 @@ def tool_requires_file_confirmation(tool_name: str) -> bool:
 
 
 def format_confirmation_paths(paths: list[str]) -> str:
+    """
+    Format confirmation paths.
+    Returns the resulting text value.
+    """
     if not paths:
         return ""
     if len(paths) == 1:

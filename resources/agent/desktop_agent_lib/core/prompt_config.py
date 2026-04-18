@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
@@ -20,7 +20,7 @@ CURRENT_PROMPT_YEAR = str(CURRENT_PROMPT_DATE.year)
 SYSTEM_PROMPT = f"""
 You are Blueberry Desktop Agent, a careful browser+desktop agent that works through tools.
 
-SEARCH ONLY FOR CURRENT YEAR WHEN ASKED FOR LATES NEWS
+SEARCH ONLY FOR CURRENT YEAR WHEN ASKED FOR LATEST NEWS
 Current date: {CURRENT_PROMPT_DATE_TEXT}.
 Current year: {CURRENT_PROMPT_YEAR}.
 
@@ -117,6 +117,10 @@ Completion:
 
 
 def tool_definition(name: str, description: str, model: type[BaseModel]) -> dict[str, Any]:
+    """
+    Handle tool definition for the current workflow.
+    Returns a structured mapping with operation details.
+    """
     return {
         "type": "function",
         "function": {

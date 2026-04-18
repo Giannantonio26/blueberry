@@ -11,6 +11,10 @@ from .file_planning import (
 )
 
 def _normalize_output_extension(raw_path: str) -> str:
+    """
+    Normalize output extension into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     return Path(raw_path).suffix.lower().lstrip(".")
 
 
@@ -18,6 +22,11 @@ def _validate_output_targets_against_request(
     runtime: AgentRuntime,
     planned_paths: list[str],
 ) -> None:
+    """
+    Validate output targets against request against runtime rules and constraints.
+    Key behavior: raises explicit errors on invalid or unsupported states.
+    Performs side effects and returns no value.
+    """
     if not planned_paths:
         return
 
@@ -52,6 +61,10 @@ def _validate_output_targets_against_request(
 def get_tool_output_path(
     runtime: AgentRuntime, tool_name: str, arguments: dict[str, Any]
 ) -> str | None:
+    """
+    Return tool output path.
+    Returns a `str | None` result.
+    """
     raw_path = arguments.get("path") if isinstance(arguments.get("path"), str) else None
     if tool_name == "write_word_file":
         return plan_output_path_for_file_action(
@@ -170,6 +183,10 @@ def get_tool_output_path(
 def prepare_tool_arguments_for_execution(
     runtime: AgentRuntime, tool_name: str, arguments: dict[str, Any]
 ) -> tuple[dict[str, Any], list[str]]:
+    """
+    Prepare tool arguments for execution.
+    Returns a `tuple[dict[str, Any], list[str]]` result.
+    """
     updated_arguments = dict(arguments)
 
     target_path = get_tool_output_path(runtime, tool_name, arguments)

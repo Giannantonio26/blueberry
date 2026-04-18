@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import zipfile
@@ -20,6 +20,11 @@ class DesktopToolMixin:
     RETRIEVAL_FINAL_TOP_K = 12
 
     def ensure_supported_generated_text_path(self, raw_path: str) -> None:
+        """
+        Ensure supported generated text path.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Performs side effects and returns no value.
+        """
         if Path(raw_path).suffix.lower() in UNSUPPORTED_GENERATED_TEXT_SUFFIXES:
             raise ValueError(
                 "JSON, HTML, and XML file creation is no longer supported by the Desktop write tools."
@@ -28,6 +33,10 @@ class DesktopToolMixin:
     def infer_text_target_format(
         self, raw_path: str, expected_suffix: str | None = None
     ) -> str | None:
+        """
+        Infer text target format.
+        Returns a `str | None` result.
+        """
         if expected_suffix:
             return expected_suffix.lstrip(".")
         suffix = Path(raw_path).suffix.lower().lstrip(".")
@@ -42,6 +51,10 @@ class DesktopToolMixin:
         content: str | None = None,
         paragraphs: list[str] | None = None,
     ) -> tuple[WriteTextFileArgs, str | None]:
+        """
+        Prepare text creation arguments.
+        Returns a `tuple[WriteTextFileArgs, str | None]` result.
+        """
         expected_suffix: str | None = None
         if file_type == "txt":
             expected_suffix = ".txt"
@@ -67,6 +80,11 @@ class DesktopToolMixin:
         return prepared_args, expected_suffix
 
     def read_web_page(self, args: ReadWebPageArgs) -> ToolResult:
+        """
+        Read web page.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         page_text = (self.agent_input.page_context.text or "").strip()
         if not self.agent_input.page_context.url and not page_text:
             return ToolResult(
@@ -92,6 +110,11 @@ class DesktopToolMixin:
         )
 
     def list_desktop_entries(self, args: ListDesktopEntriesArgs) -> ToolResult:
+        """
+        List desktop entries.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         directory = self.resolve_desktop_path(args.path)
         if not directory.exists():
             raise ValueError(f"Directory does not exist: {directory}")
@@ -119,6 +142,11 @@ class DesktopToolMixin:
         )
 
     def read_desktop_file(self, args: ReadDesktopFileArgs) -> ToolResult:
+        """
+        Read desktop file.
+        Key behavior: serializes JSON payloads, performs local file I/O, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.resolve_desktop_path(args.path)
         if not file_path.exists():
             raise ValueError(f"File does not exist: {file_path}")
@@ -158,6 +186,11 @@ class DesktopToolMixin:
         )
 
     def read_desktop_file_if_exists(self, args: ReadDesktopFileIfExistsArgs) -> ToolResult:
+        """
+        Read desktop file if exists.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.resolve_desktop_path(args.path)
         if not file_path.exists():
             return ToolResult(
@@ -187,6 +220,11 @@ class DesktopToolMixin:
         return self.read_desktop_file(ReadDesktopFileArgs(path=str(file_path)))
 
     def create_folder(self, args: CreateFolderArgs) -> ToolResult:
+        """
+        Create folder.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         folder_path = self.resolve_desktop_path(args.path)
         folder_path.mkdir(parents=True, exist_ok=True)
         self.record_changed_path(folder_path)
@@ -211,6 +249,11 @@ class DesktopToolMixin:
         *,
         selected_source_domains: list[str] | None = None,
     ) -> ToolResult:
+        """
+        Handle retrieve relevant chunks for the current workflow.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         retrieved_chunks, retrieval_queries = self.retrieve_relevant_chunks_from_store(
             args.query,
             self.RETRIEVAL_FINAL_TOP_K,
@@ -249,6 +292,11 @@ class DesktopToolMixin:
         args: WriteTextFileArgs,
         expected_suffix: str | None = None,
     ) -> ToolResult:
+        """
+        Write text file direct.
+        Key behavior: serializes JSON payloads, performs local file I/O, and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.get_unique_output_path(args.path, expected_suffix)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(args.content, encoding="utf-8")
@@ -269,6 +317,10 @@ class DesktopToolMixin:
         )
 
     def write_text_file(self, args: WriteTextFileArgs) -> ToolResult:
+        """
+        Write text file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("write_text_file")
         self.ensure_supported_generated_text_path(args.path)
         prepared_args = self.prepare_text_file_from_retrieved_chunks(
@@ -286,6 +338,10 @@ class DesktopToolMixin:
         tool_name: str,
         expected_suffix: str,
     ) -> ToolResult:
+        """
+        Write text variant file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write(tool_name)
         prepared_args = self.prepare_text_file_from_retrieved_chunks(
             args,
@@ -299,6 +355,10 @@ class DesktopToolMixin:
         return result
 
     def write_txt_file(self, args: WriteTxtFileArgs) -> ToolResult:
+        """
+        Write text file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         return self._write_text_variant_file(
             args,
             tool_name="write_txt_file",
@@ -306,6 +366,10 @@ class DesktopToolMixin:
         )
 
     def write_markdown_file(self, args: WriteMarkdownFileArgs) -> ToolResult:
+        """
+        Write markdown file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         return self._write_text_variant_file(
             args,
             tool_name="write_markdown_file",
@@ -313,6 +377,10 @@ class DesktopToolMixin:
         )
 
     def write_csv_file(self, args: WriteCsvFileArgs) -> ToolResult:
+        """
+        Write CSV file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         return self._write_text_variant_file(
             args,
             tool_name="write_csv_file",
@@ -320,21 +388,41 @@ class DesktopToolMixin:
         )
 
     def write_json_file(self, args: WriteJsonFileArgs) -> ToolResult:
+        """
+        Write JSON file.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         raise ValueError(
             "JSON file creation is no longer supported by the Desktop write tools."
         )
 
     def write_html_file(self, args: WriteHtmlFileArgs) -> ToolResult:
+        """
+        Write html file.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         raise ValueError(
             "HTML file creation is no longer supported by the Desktop write tools."
         )
 
     def write_xml_file(self, args: WriteXmlFileArgs) -> ToolResult:
+        """
+        Write XML file.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         raise ValueError(
             "XML file creation is no longer supported by the Desktop write tools."
         )
 
     def _write_word_file_direct(self, args: WriteWordFileArgs) -> ToolResult:
+        """
+        Write word file direct.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.get_unique_output_path(args.path, ".docx")
         file_path.parent.mkdir(parents=True, exist_ok=True)
         paragraphs = self.build_word_paragraphs(
@@ -361,6 +449,10 @@ class DesktopToolMixin:
         )
 
     def write_word_file(self, args: WriteWordFileArgs) -> ToolResult:
+        """
+        Write word file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("write_word_file")
         prepared_args = self.prepare_word_file_from_retrieved_chunks(args)
         result = self._write_word_file_direct(prepared_args)
@@ -368,6 +460,11 @@ class DesktopToolMixin:
         return result
 
     def _write_pdf_file_direct(self, args: WritePdfFileArgs) -> ToolResult:
+        """
+        Write PDF file direct.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.get_unique_output_path(args.path, ".pdf")
         file_path.parent.mkdir(parents=True, exist_ok=True)
         page_count = self.write_pdf_document(
@@ -393,6 +490,10 @@ class DesktopToolMixin:
         )
 
     def write_pdf_file(self, args: WritePdfFileArgs) -> ToolResult:
+        """
+        Write PDF file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("write_pdf_file")
         prepared_args = self.prepare_pdf_file_from_retrieved_chunks(args)
         result = self._write_pdf_file_direct(prepared_args)
@@ -400,6 +501,11 @@ class DesktopToolMixin:
         return result
 
     def _write_powerpoint_file_direct(self, args: WritePowerPointFileArgs) -> ToolResult:
+        """
+        Write powerpoint file direct.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         normalized_slides = self.normalize_presentation_slides(args.slides)
         normalized_content = self.normalize_document_text(
             args.content,
@@ -449,6 +555,10 @@ class DesktopToolMixin:
         )
 
     def write_powerpoint_file(self, args: WritePowerPointFileArgs) -> ToolResult:
+        """
+        Write powerpoint file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("write_powerpoint_file")
         prepared_args = self.prepare_powerpoint_file_from_retrieved_chunks(args)
         result = self._write_powerpoint_file_direct(prepared_args)
@@ -462,6 +572,11 @@ class DesktopToolMixin:
         reason: str,
         include_in_changed_paths: bool,
     ) -> dict[str, Any]:
+        """
+        Delete desktop file path.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a structured mapping with operation details.
+        """
         if not file_path.exists():
             raise ValueError(f"File does not exist: {file_path}")
         if not file_path.is_file():
@@ -490,6 +605,11 @@ class DesktopToolMixin:
         original_path: Path,
         replacement_path: Path,
     ) -> None:
+        """
+        Handle replace desktop file with prepared output for the current workflow.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Performs side effects and returns no value.
+        """
         if not replacement_path.exists():
             raise RuntimeError(
                 f"The prepared replacement file is missing: {replacement_path}"
@@ -509,6 +629,11 @@ class DesktopToolMixin:
             ) from error
 
     def delete_desktop_file(self, args: DeleteDesktopFileArgs) -> ToolResult:
+        """
+        Delete desktop file.
+        Key behavior: serializes JSON payloads and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.resolve_desktop_path(args.path)
         result_payload = self._delete_desktop_file_path(
             file_path,
@@ -523,6 +648,11 @@ class DesktopToolMixin:
         )
 
     def edit_desktop_file(self, args: EditDesktopFileArgs) -> ToolResult:
+        """
+        Edit desktop file.
+        Key behavior: serializes JSON payloads, performs local file I/O, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.resolve_desktop_path(args.path)
         if not file_path.exists():
             raise ValueError(f"File does not exist: {file_path}")
@@ -605,6 +735,11 @@ class DesktopToolMixin:
         raise ValueError("edit_desktop_file only supports text-based files and .docx documents.")
 
     def convert_desktop_file_format(self, args: ConvertDesktopFileFormatArgs) -> ToolResult:
+        """
+        Convert desktop file format.
+        Key behavior: serializes JSON payloads, builds or reads ZIP container content, performs local file I/O, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         source_file_path = self.resolve_desktop_path(args.source_path)
         if not source_file_path.exists():
             raise ValueError(f"File does not exist: {source_file_path}")
@@ -622,9 +757,19 @@ class DesktopToolMixin:
         conversion_title = source_file_path.stem or "Converted File"
 
         def write_text_output(content: str) -> None:
+            """
+            Write text output.
+            Key behavior: performs local file I/O.
+            Performs side effects and returns no value.
+            """
             output_file_path.write_text(content, encoding="utf-8")
 
         def write_docx_output(content: str) -> None:
+            """
+            Write DOCX output.
+            Key behavior: raises explicit errors on invalid or unsupported states.
+            Performs side effects and returns no value.
+            """
             paragraphs = self.build_word_paragraphs(
                 title=conversion_title,
                 content=content,
@@ -634,6 +779,10 @@ class DesktopToolMixin:
             self.write_docx_file(output_file_path, paragraphs)
 
         def write_pdf_output(content: str) -> None:
+            """
+            Write PDF output.
+            Performs side effects and returns no value.
+            """
             self.write_pdf_document(
                 output_file_path,
                 title=conversion_title,
@@ -641,10 +790,18 @@ class DesktopToolMixin:
             )
 
         def write_pptx_output_from_text(content: str) -> None:
+            """
+            Write PPTX output from text.
+            Performs side effects and returns no value.
+            """
             slides = self.build_conversion_slides_from_text(conversion_title, content)
             self.write_pptx_file(output_file_path, slides, conversion_title)
 
         def write_pptx_output_from_sheets(sheets: list[ExcelSheet]) -> None:
+            """
+            Write PPTX output from sheets.
+            Performs side effects and returns no value.
+            """
             slides = self.build_conversion_slides_from_sheets(sheets, conversion_title)
             self.write_pptx_file(output_file_path, slides, conversion_title)
 
@@ -794,6 +951,11 @@ class DesktopToolMixin:
         )
 
     def _write_excel_file_direct(self, args: WriteExcelFileArgs) -> ToolResult:
+        """
+        Write excel file direct.
+        Key behavior: serializes JSON payloads, builds or reads ZIP container content, and wraps outcomes in runtime tool-result objects.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         file_path = self.get_unique_output_path(args.path, ".xlsx")
         file_path.parent.mkdir(parents=True, exist_ok=True)
         workbook_xml, workbook_rels_xml, worksheet_files, content_types_xml = self.build_xlsx_package(
@@ -832,6 +994,10 @@ class DesktopToolMixin:
         )
 
     def write_excel_file(self, args: WriteExcelFileArgs) -> ToolResult:
+        """
+        Write excel file.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("write_excel_file")
         prepared_args = self.prepare_excel_file_from_retrieved_chunks(args)
         result = self._write_excel_file_direct(prepared_args)
@@ -839,6 +1005,11 @@ class DesktopToolMixin:
         return result
 
     def create_multiple_files(self, args: CreateMultipleFilesArgs) -> ToolResult:
+        """
+        Create multiple files.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("create_multiple_files")
         planned_files = self.plan_multiple_file_specs(args.files)
         prepared_operations: list[tuple[str, Any, str | None]] = []
@@ -955,6 +1126,11 @@ class DesktopToolMixin:
         )
 
     def add_file_to_existing_folder(self, args: AddFileToExistingFolderArgs) -> ToolResult:
+        """
+        Handle add file to existing folder for the current workflow.
+        Key behavior: parses JSON payloads, serializes JSON payloads, wraps outcomes in runtime tool-result objects, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.require_retrieved_chunks_for_write("add_file_to_existing_folder")
         folder_path = self.resolve_desktop_path(args.folder_path)
         if not folder_path.exists():
@@ -1045,6 +1221,11 @@ class DesktopToolMixin:
         )
 
     def show_desktop_view(self, args: ShowDesktopViewArgs) -> ToolResult:
+        """
+        Show desktop view.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, and updates instance state for subsequent workflow steps.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.should_open_desktop_view = True
         return ToolResult(
             content=json.dumps(
@@ -1058,6 +1239,11 @@ class DesktopToolMixin:
         )
 
     def close_agent_session(self, args: CloseAgentSessionArgs) -> ToolResult:
+        """
+        Close agent session.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, and updates instance state for subsequent workflow steps.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.session_should_close = True
         self.invalidate_retrieved_chunks()
         return ToolResult(
@@ -1073,6 +1259,11 @@ class DesktopToolMixin:
         )
 
     def show_desktop_folder(self, args: ShowDesktopFolderArgs) -> ToolResult:
+        """
+        Show desktop folder.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, updates instance state for subsequent workflow steps, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         folder_path = self.resolve_desktop_path(args.path)
         if not folder_path.exists():
             raise ValueError(f"Folder does not exist: {folder_path}")
@@ -1094,6 +1285,11 @@ class DesktopToolMixin:
         )
 
     def click_desktop_folder(self, args: ClickDesktopFolderArgs) -> ToolResult:
+        """
+        Click desktop folder.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, updates instance state for subsequent workflow steps, and raises explicit errors on invalid or unsupported states.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         folder_path = self.resolve_desktop_path(args.path)
         if not folder_path.exists():
             raise ValueError(f"Folder does not exist: {folder_path}")
@@ -1115,6 +1311,11 @@ class DesktopToolMixin:
         )
 
     def move_cursor(self, args: MoveCursorArgs) -> ToolResult:
+        """
+        Move cursor.
+        Key behavior: serializes JSON payloads, wraps outcomes in runtime tool-result objects, and updates instance state for subsequent workflow steps.
+        Returns a `ToolResult` payload for the runtime tool pipeline.
+        """
         self.should_open_desktop_view = True
         return ToolResult(
             content=json.dumps(

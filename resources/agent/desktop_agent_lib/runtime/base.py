@@ -31,6 +31,10 @@ DESKTOP_ROOT_ALIAS_FOLDER = "blueberry"
 
 
 def _sanitize_utf8_text(value: Any) -> str:
+    """
+    Sanitize utf8 text into a safe, normalized representation.
+    Returns the resulting text value.
+    """
     raw_value = str(value or "")
     return "".join(
         character
@@ -41,6 +45,11 @@ def _sanitize_utf8_text(value: Any) -> str:
 
 class AgentRuntimeBase:
     def __init__(self, agent_input: AgentInput) -> None:
+        """
+        Initialize the object and configure its initial runtime state.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.agent_input = agent_input
         self.latest_user_request = get_latest_user_message(agent_input.messages)
         self.desktop_root = Path(agent_input.desktop_root).resolve()
@@ -86,6 +95,10 @@ class AgentRuntimeBase:
             self.required_desktop_action_kind = "write_output"
 
     def coerce_alias_path_to_desktop_root(self, resolved_path: Path) -> Path:
+        """
+        Coerce alias path to desktop root.
+        Returns a resolved filesystem path value.
+        """
         if self.desktop_root.name.lower() != DESKTOP_ROOT_CANONICAL_FOLDER:
             return resolved_path
 
@@ -98,6 +111,11 @@ class AgentRuntimeBase:
         return (self.desktop_root / alias_relative_path).resolve()
 
     def resolve_desktop_path(self, raw_path: str | None) -> Path:
+        """
+        Resolve desktop path.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a resolved filesystem path value.
+        """
         if not raw_path:
             return self.desktop_root
 
@@ -113,6 +131,10 @@ class AgentRuntimeBase:
         return resolved
 
     def format_entry(self, path: Path) -> dict[str, Any]:
+        """
+        Format entry.
+        Returns a structured mapping with operation details.
+        """
         return {
             "name": path.name,
             "path": str(path),
@@ -121,6 +143,10 @@ class AgentRuntimeBase:
         }
 
     def record_visited_website(self, url: str, title: str) -> None:
+        """
+        Record visited website.
+        Performs side effects and returns no value.
+        """
         normalized_url = url.strip()
         if not normalized_url:
             return
@@ -129,6 +155,11 @@ class AgentRuntimeBase:
         self.visited_websites[normalized_url] = normalized_title
 
     def record_changed_path(self, path: Path) -> None:
+        """
+        Record changed path.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.filesystem_changed = True
         normalized = str(path)
         if normalized not in self.changed_paths:
@@ -136,6 +167,11 @@ class AgentRuntimeBase:
         self.should_open_desktop_view = True
 
     def forget_changed_path(self, path: Path) -> None:
+        """
+        Handle forget changed path for the current workflow.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         normalized = str(path)
         self.changed_paths = [
             changed_path
@@ -149,6 +185,11 @@ class AgentRuntimeBase:
         tool_name: str,
         result: ToolResult,
     ) -> None:
+        """
+        Record completed desktop action.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         if not result.changed_paths:
             return
 
@@ -194,6 +235,10 @@ class AgentRuntimeBase:
                 self.expected_output_extensions.discard(ext)
 
     def required_desktop_action_satisfied(self) -> bool:
+        """
+        Handle required desktop action satisfied for the current workflow.
+        Returns a boolean status for the requested check or operation.
+        """
         required_action = self.required_desktop_action_kind
         if required_action is None:
             return True
@@ -216,17 +261,34 @@ class AgentRuntimeBase:
         return satisfied
 
     def has_pending_output_extensions(self) -> bool:
+        """
+        Check whether pending output extensions.
+        Returns `True` when the condition is satisfied, otherwise `False`.
+        """
         return bool(self.expected_output_extensions)
 
     def created_output_count(self) -> int:
+        """
+        Handle created output count for the current workflow.
+        Returns a `int` result.
+        """
         return len(self.created_output_paths)
 
     def remaining_requested_output_count(self) -> int | None:
+        """
+        Handle remaining requested output count for the current workflow.
+        Returns a `int | None` result.
+        """
         if self.requested_output_count is None:
             return None
         return max(0, self.requested_output_count - self.created_output_count())
 
     def invalidate_retrieved_chunks(self) -> None:
+        """
+        Handle invalidate retrieved chunks for the current workflow.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.retrieved_chunks = []
         self.last_retrieval_query = ""
         self.retrieval_ready_for_write = False
@@ -236,11 +298,21 @@ class AgentRuntimeBase:
         query: str,
         chunks: Sequence[RetrievedChunk],
     ) -> None:
+        """
+        Record retrieved chunks.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.retrieved_chunks = list(chunks)
         self.last_retrieval_query = query.strip()
         self.retrieval_ready_for_write = True
 
     def require_retrieved_chunks_for_write(self, tool_name: str) -> None:
+        """
+        Handle require retrieved chunks for write for the current workflow.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Performs side effects and returns no value.
+        """
         if self.retrieval_ready_for_write:
             return
 
@@ -251,9 +323,18 @@ class AgentRuntimeBase:
     def consume_retrieved_chunks_for_write(self) -> None:
         # Keep retrieval context available for the remaining document outputs until
         # new web research or an explicit retrieval refresh invalidates it.
+        """
+        Handle consume retrieved chunks for write for the current workflow.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.retrieval_ready_for_write = bool(self.retrieved_chunks)
 
     def ingest_research_source(self, source_payload: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle ingest research source for the current workflow.
+        Returns a structured mapping with operation details.
+        """
         content = source_payload.get("text_content")
         source_url = _sanitize_utf8_text(source_payload.get("url")).strip()
         source_title = _sanitize_utf8_text(source_payload.get("title")).strip()
@@ -311,6 +392,10 @@ class AgentRuntimeBase:
         return ingestion_result
 
     def build_fallback_retrieval_queries(self, query: str) -> list[str]:
+        """
+        Build fallback retrieval queries.
+        Returns an ordered collection of computed items.
+        """
         normalized_query = _sanitize_utf8_text(query).strip()
         fallback_queries = [
             normalized_query,
@@ -332,6 +417,11 @@ class AgentRuntimeBase:
         return unique_queries[:3]
 
     def extract_retrieval_queries_from_raw_content(self, raw_content: str) -> list[str]:
+        """
+        Extract retrieval queries from raw content.
+        Key behavior: parses JSON payloads.
+        Returns an ordered collection of computed items.
+        """
         normalized_raw = _sanitize_utf8_text(raw_content).strip()
         if not normalized_raw:
             return []
@@ -377,6 +467,11 @@ class AgentRuntimeBase:
         return extracted_queries
 
     def generate_retrieval_queries(self, query: str) -> list[str]:
+        """
+        Handle generate retrieval queries for the current workflow.
+        Key behavior: calls the configured LLM endpoint.
+        Returns an ordered collection of computed items.
+        """
         normalized_query = _sanitize_utf8_text(query).strip()
         if not normalized_query:
             return []
@@ -452,6 +547,10 @@ class AgentRuntimeBase:
         return unique_queries[:3]
 
     def list_retrieval_source_domains(self) -> list[str]:
+        """
+        List retrieval source domains.
+        Returns an ordered collection of computed items.
+        """
         return self.research_store.list_source_domains()
 
     def retrieve_relevant_chunks_from_store(
@@ -461,6 +560,10 @@ class AgentRuntimeBase:
         *,
         selected_source_domains: Sequence[str] | None = None,
     ) -> tuple[list[RetrievedChunk], list[str]]:
+        """
+        Handle retrieve relevant chunks from store for the current workflow.
+        Returns a `tuple[list[RetrievedChunk], list[str]]` result.
+        """
         retrieval_queries = self.generate_retrieval_queries(query)
         effective_retrieval_queries = retrieval_queries or [_sanitize_utf8_text(query).strip()]
         chunks = self.research_store.retrieve_top_k_for_queries(
@@ -475,6 +578,10 @@ class AgentRuntimeBase:
     def resolve_unique_file_path(
         self, file_path: Path, reserved_paths: set[str] | None = None
     ) -> Path:
+        """
+        Resolve unique file path.
+        Returns a resolved filesystem path value.
+        """
         normalized_path = str(file_path)
         if not file_path.exists() and (
             reserved_paths is None or normalized_path not in reserved_paths
@@ -502,6 +609,10 @@ class AgentRuntimeBase:
         *,
         reserved_paths: set[str] | None = None,
     ) -> Path:
+        """
+        Return unique output path.
+        Returns a resolved filesystem path value.
+        """
         file_path = self.resolve_desktop_path(raw_path)
         if expected_suffix and file_path.suffix.lower() != expected_suffix:
             file_path = file_path.with_suffix(expected_suffix)
@@ -513,6 +624,10 @@ class AgentRuntimeBase:
         *,
         destination_folder: str | None = None,
     ) -> list[MultiFileSpec]:
+        """
+        Handle plan multiple file specs for the current workflow.
+        Returns an ordered collection of computed items.
+        """
         planned_files: list[MultiFileSpec] = []
         reserved_paths: set[str] = set()
 

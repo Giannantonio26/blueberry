@@ -32,6 +32,11 @@ EMBEDDING_DIMENSION_MISMATCH_RE = re.compile(
 
 
 def emit_vector_store_log(message: str) -> None:
+    """
+    Handle emit vector store log for the current workflow.
+    Key behavior: applies regex-based parsing or normalization.
+    Performs side effects and returns no value.
+    """
     try:
         safe_message = re.sub(r"[\ud800-\udfff]", "", str(message))
         sys.stderr.write(f"[vector-store] {safe_message}\n")
@@ -44,6 +49,11 @@ def emit_vector_store_log(message: str) -> None:
 def extract_embedding_dimension_mismatch(
     error: Exception,
 ) -> tuple[int | None, int | None]:
+    """
+    Extract embedding dimension mismatch.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns a `tuple[int | None, int | None]` result.
+    """
     match = EMBEDDING_DIMENSION_MISMATCH_RE.search(str(error))
     if not match:
         return (None, None)
@@ -58,6 +68,10 @@ def extract_embedding_dimension_mismatch(
 
 
 def get_project_chroma_path(raw_path: str | Path | None = None) -> Path:
+    """
+    Return project Chroma path.
+    Returns a resolved filesystem path value.
+    """
     configured_path = str(raw_path).strip() if raw_path is not None else ""
     if not configured_path:
         configured_path = os.getenv("BLUEBERRY_CHROMA_PATH", "").strip()
@@ -70,15 +84,27 @@ def get_project_chroma_path(raw_path: str | Path | None = None) -> Path:
 
 
 def get_default_collection_name() -> str:
+    """
+    Return default collection name.
+    Returns the resulting text value.
+    """
     configured_name = os.getenv("BLUEBERRY_CHROMA_DEFAULT_COLLECTION", "").strip()
     return configured_name or DEFAULT_COLLECTION_NAME
 
 
 def get_configured_embedding_model() -> str:
+    """
+    Return configured embedding model.
+    Returns the resulting text value.
+    """
     return os.getenv("BLUEBERRY_CHROMA_EMBEDDING_MODEL", "").strip()
 
 
 def parse_positive_int_env(name: str, fallback: int) -> int:
+    """
+    Parse positive int env.
+    Returns a `int` result.
+    """
     raw_value = os.getenv(name, "").strip()
     if not raw_value:
         return fallback
@@ -92,10 +118,18 @@ def parse_positive_int_env(name: str, fallback: int) -> int:
 
 
 def get_default_chunk_size() -> int:
+    """
+    Return default chunk size.
+    Returns a `int` result.
+    """
     return parse_positive_int_env("BLUEBERRY_CHROMA_CHUNK_SIZE", DEFAULT_CHUNK_SIZE)
 
 
 def get_default_chunk_overlap() -> int:
+    """
+    Return default chunk overlap.
+    Returns a `int` result.
+    """
     overlap = parse_positive_int_env(
         "BLUEBERRY_CHROMA_CHUNK_OVERLAP", DEFAULT_CHUNK_OVERLAP
     )
@@ -103,12 +137,21 @@ def get_default_chunk_overlap() -> int:
 
 
 def get_default_guard_batch_size() -> int:
+    """
+    Return default guard batch size.
+    Returns a `int` result.
+    """
     return parse_positive_int_env(
         "BLUEBERRY_CHROMA_GUARD_BATCH_SIZE", DEFAULT_GUARD_BATCH_SIZE
     )
 
 
 def normalize_source_text(raw_text: str) -> str:
+    """
+    Normalize source text into a canonical form for downstream logic.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns the resulting text value.
+    """
     safe_text = re.sub(r"[\ud800-\udfff]", "", str(raw_text))
     normalized = safe_text.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
     normalized = re.sub(r"[ \t]+", " ", normalized)
@@ -117,10 +160,18 @@ def normalize_source_text(raw_text: str) -> str:
 
 
 def normalize_source_domain_key(raw_domain: str) -> str:
+    """
+    Normalize source domain key into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     return normalize_source_text(raw_domain).strip().lower()
 
 
 def normalize_source_domain_from_url(raw_url: str) -> str:
+    """
+    Normalize source domain from URL into a canonical form for downstream logic.
+    Returns the resulting text value.
+    """
     normalized_url = normalize_source_text(raw_url).strip()
     if not normalized_url:
         return ""
@@ -137,6 +188,10 @@ def normalize_source_domain_from_url(raw_url: str) -> str:
 
 
 def coerce_row_list(raw_value: Any) -> list[Any]:
+    """
+    Coerce row list.
+    Returns an ordered collection of computed items.
+    """
     if isinstance(raw_value, list):
         return raw_value
     if isinstance(raw_value, tuple):
@@ -152,6 +207,10 @@ def coerce_row_list(raw_value: Any) -> list[Any]:
 
 
 def coerce_numeric_embedding(raw_embedding: Any) -> list[float]:
+    """
+    Coerce numeric embedding.
+    Returns an ordered collection of computed items.
+    """
     candidate_value = raw_embedding
     to_list = getattr(candidate_value, "tolist", None)
     if callable(to_list):
@@ -170,6 +229,11 @@ def coerce_numeric_embedding(raw_embedding: Any) -> list[float]:
 
 
 def _tokenize_for_fallback_embedding(text: str) -> list[str]:
+    """
+    Handle tokenize for fallback embedding for the current workflow.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns an ordered collection of computed items.
+    """
     return re.findall(r"[a-z0-9_]+", text.lower())
 
 
@@ -178,6 +242,10 @@ def build_deterministic_fallback_embeddings(
     *,
     dimensions: int = DEFAULT_FALLBACK_EMBEDDING_DIM,
 ) -> list[list[float]]:
+    """
+    Build deterministic fallback embeddings.
+    Returns an ordered collection of computed items.
+    """
     safe_dimensions = max(64, int(dimensions))
     embeddings: list[list[float]] = []
     for text in texts:
@@ -219,6 +287,10 @@ class ChunkGuardBatchResult(BaseModel):
 
 
 def _parse_guard_boolean(raw_value: Any) -> bool:
+    """
+    Parse guard boolean.
+    Returns a boolean status for the requested check or operation.
+    """
     if isinstance(raw_value, bool):
         return raw_value
     if isinstance(raw_value, (int, float)):
@@ -230,6 +302,10 @@ def _parse_guard_boolean(raw_value: Any) -> bool:
 
 
 def _normalize_guard_assessment(raw_assessment: Any) -> dict[str, Any] | None:
+    """
+    Normalize guard assessment into a canonical form for downstream logic.
+    Returns a structured mapping with operation details.
+    """
     if not isinstance(raw_assessment, dict):
         return None
 
@@ -273,6 +349,11 @@ def _normalize_guard_assessment(raw_assessment: Any) -> dict[str, Any] | None:
 
 
 def parse_chunk_guard_batch_result(raw_content: str) -> ChunkGuardBatchResult:
+    """
+    Parse chunk guard batch result.
+    Key behavior: applies regex-based parsing or normalization and raises explicit errors on invalid or unsupported states.
+    Returns a `ChunkGuardBatchResult` result.
+    """
     normalized_content = raw_content.strip()
     fenced_match = re.match(
         r"^```(?:json)?\s*(.*?)\s*```$",
@@ -335,11 +416,20 @@ def parse_chunk_guard_batch_result(raw_content: str) -> ChunkGuardBatchResult:
 
 class ProjectChromaStore:
     def __init__(self, path: str | Path | None = None) -> None:
+        """
+        Initialize the object and configure its initial runtime state.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Performs side effects and returns no value.
+        """
         self.path = get_project_chroma_path(path)
         self.path.mkdir(parents=True, exist_ok=True)
         self.client = chromadb.PersistentClient(path=str(self.path))
 
     def heartbeat(self) -> int | None:
+        """
+        Handle heartbeat for the current workflow.
+        Returns a `int | None` result.
+        """
         try:
             heartbeat = self.client.heartbeat()
         except Exception:
@@ -348,6 +438,10 @@ class ProjectChromaStore:
         return heartbeat if isinstance(heartbeat, int) else None
 
     def describe(self) -> dict[str, Any]:
+        """
+        Handle describe for the current workflow.
+        Returns a structured mapping with operation details.
+        """
         return {
             "path": str(self.path),
             "default_collection": get_default_collection_name(),
@@ -356,6 +450,10 @@ class ProjectChromaStore:
         }
 
     def list_collection_names(self) -> list[str]:
+        """
+        List collection names.
+        Returns an ordered collection of computed items.
+        """
         collection_names: list[str] = []
         for collection in self.client.list_collections():
             name = getattr(collection, "name", None)
@@ -373,6 +471,11 @@ class ProjectChromaStore:
         name: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> Any:
+        """
+        Return or create collection.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns a `Any` result.
+        """
         collection_name = (name or get_default_collection_name()).strip()
         if not collection_name:
             raise ValueError("Collection name cannot be empty.")
@@ -383,6 +486,11 @@ class ProjectChromaStore:
         )
 
     def delete_collection(self, name: str) -> None:
+        """
+        Delete collection.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Performs side effects and returns no value.
+        """
         collection_name = name.strip()
         if not collection_name:
             raise ValueError("Collection name cannot be empty.")
@@ -390,6 +498,10 @@ class ProjectChromaStore:
         self.client.delete_collection(collection_name)
 
     def clear_all_collections(self) -> int:
+        """
+        Clear all collections.
+        Returns a `int` result.
+        """
         deleted_count = 0
         for collection_name in self.list_collection_names():
             try:
@@ -400,6 +512,10 @@ class ProjectChromaStore:
         return deleted_count
 
     def count(self, collection_name: str) -> int:
+        """
+        Handle count for the current workflow.
+        Returns a `int` result.
+        """
         collection = self.get_or_create_collection(collection_name)
         count = collection.count()
         return count if isinstance(count, int) else 0
@@ -413,6 +529,10 @@ class ProjectChromaStore:
         metadatas: Sequence[dict[str, Any]] | None = None,
         embeddings: Sequence[Sequence[float]] | None = None,
     ) -> None:
+        """
+        Handle upsert for the current workflow.
+        Performs side effects and returns no value.
+        """
         collection = self.get_or_create_collection(collection_name)
         payload: dict[str, Any] = {"ids": list(ids)}
 
@@ -435,6 +555,10 @@ class ProjectChromaStore:
         where: dict[str, Any] | None = None,
         include: Sequence[str] | None = None,
     ) -> dict[str, Any]:
+        """
+        Handle query for the current workflow.
+        Returns a structured mapping with operation details.
+        """
         collection = self.get_or_create_collection(collection_name)
         payload: dict[str, Any] = {"n_results": n_results}
 
@@ -459,6 +583,10 @@ class ProjectChromaStore:
         where: dict[str, Any] | None = None,
         include: Sequence[str] | None = None,
     ) -> dict[str, Any]:
+        """
+        Return the required data.
+        Returns a structured mapping with operation details.
+        """
         collection = self.get_or_create_collection(collection_name)
         payload: dict[str, Any] = {}
 
@@ -486,6 +614,11 @@ class ProjectChromaResearchStore:
         chunk_overlap: int | None = None,
         guard_batch_size: int | None = None,
     ) -> None:
+        """
+        Initialize the object and configure its initial runtime state.
+        Key behavior: updates instance state for subsequent workflow steps and raises explicit errors on invalid or unsupported states.
+        Performs side effects and returns no value.
+        """
         self.api_key = api_key
         self.base_url = base_url
         self.embedding_model = (
@@ -528,13 +661,26 @@ class ProjectChromaResearchStore:
         self._remote_embeddings_disable_logged = False
 
     def count(self) -> int:
+        """
+        Handle count for the current workflow.
+        Returns a `int` result.
+        """
         return self.store.count(self.collection_name)
 
     def clear(self) -> None:
+        """
+        Clear the required data.
+        Performs side effects and returns no value.
+        """
         if self.collection_name in self.store.list_collection_names():
             self.store.delete_collection(self.collection_name)
 
     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
+        """
+        Handle embed texts for the current workflow.
+        Key behavior: updates instance state for subsequent workflow steps.
+        Returns an ordered collection of computed items.
+        """
         normalized_texts = [normalize_source_text(text) for text in texts if text.strip()]
         if not normalized_texts:
             return []
@@ -582,6 +728,10 @@ class ProjectChromaResearchStore:
         return []
 
     def build_chunk_id(self, source_url: str, chunk_index: int, chunk_text: str) -> str:
+        """
+        Build chunk ID.
+        Returns the resulting text value.
+        """
         safe_source_url = normalize_source_text(source_url)
         safe_chunk_text = normalize_source_text(chunk_text)
         digest = hashlib.sha256(
@@ -598,6 +748,11 @@ class ProjectChromaResearchStore:
         source_title: str,
         chunks: Sequence[tuple[int, str]],
     ) -> set[int]:
+        """
+        Handle identify malicious chunk indexes for the current workflow.
+        Key behavior: calls the configured LLM endpoint.
+        Returns a `set[int]` result.
+        """
         malicious_indexes: set[int] = set()
 
         for batch_start in range(0, len(chunks), self.guard_batch_size):
@@ -664,6 +819,11 @@ class ProjectChromaResearchStore:
         headings: Sequence[str] | None = None,
         meta_description: str | None = None,
     ) -> dict[str, Any]:
+        """
+        Handle ingest web page for the current workflow.
+        Key behavior: serializes JSON payloads and raises explicit errors on invalid or unsupported states.
+        Returns a structured mapping with operation details.
+        """
         normalized_source_url = source_url.strip()
         normalized_content = normalize_source_text(content)
         normalized_source_title = normalize_source_text(source_title)
@@ -872,6 +1032,10 @@ class ProjectChromaResearchStore:
             }
 
         def upsert_chunks() -> None:
+            """
+            Handle upsert chunks for the current workflow.
+            Performs side effects and returns no value.
+            """
             self.store.upsert(
                 self.collection_name,
                 ids=chunk_ids,
@@ -970,6 +1134,10 @@ class ProjectChromaResearchStore:
         }
 
     def list_source_domains(self) -> list[str]:
+        """
+        List source domains.
+        Returns an ordered collection of computed items.
+        """
         if self.count() == 0:
             return []
 
@@ -1011,6 +1179,10 @@ class ProjectChromaResearchStore:
         *,
         source_domains: Sequence[str] | None = None,
     ) -> list[dict[str, Any]]:
+        """
+        Load retrieval candidates.
+        Returns an ordered collection of computed items.
+        """
         normalized_filter_domains = {
             normalize_source_domain_key(source_domain)
             for source_domain in (source_domains or [])
@@ -1155,6 +1327,10 @@ class ProjectChromaResearchStore:
         left_embedding: Sequence[float],
         right_embedding: Sequence[float],
     ) -> float:
+        """
+        Handle semantic similarity for the current workflow.
+        Returns a `float` result.
+        """
         if not left_embedding or not right_embedding:
             return 0.0
 
@@ -1177,6 +1353,10 @@ class ProjectChromaResearchStore:
         candidate: dict[str, Any],
         similarity: float,
     ) -> RetrievedChunk:
+        """
+        Build retrieved chunk.
+        Returns a `RetrievedChunk` result.
+        """
         metadata = candidate.get("metadata")
         metadata = metadata if isinstance(metadata, dict) else {}
         return RetrievedChunk(
@@ -1199,6 +1379,10 @@ class ProjectChromaResearchStore:
         candidates: Sequence[dict[str, Any]],
         top_k: int,
     ) -> list[RetrievedChunk]:
+        """
+        Handle retrieve top k for query for the current workflow.
+        Returns an ordered collection of computed items.
+        """
         normalized_query = normalize_source_text(query)
         scored_candidates: list[tuple[float, dict[str, Any]]] = []
 
@@ -1254,6 +1438,11 @@ class ProjectChromaResearchStore:
         *,
         source_domains: Sequence[str] | None = None,
     ) -> list[RetrievedChunk]:
+        """
+        Handle retrieve top k for the current workflow.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns an ordered collection of computed items.
+        """
         normalized_query = normalize_source_text(query)
         if not normalized_query:
             raise ValueError("Retrieval query cannot be empty.")
@@ -1329,6 +1518,11 @@ class ProjectChromaResearchStore:
         final_top_k: int = 12,
         source_domains: Sequence[str] | None = None,
     ) -> list[RetrievedChunk]:
+        """
+        Handle retrieve top k for queries for the current workflow.
+        Key behavior: raises explicit errors on invalid or unsupported states.
+        Returns an ordered collection of computed items.
+        """
         normalized_queries: list[str] = []
         seen_queries: set[str] = set()
         for raw_query in queries:

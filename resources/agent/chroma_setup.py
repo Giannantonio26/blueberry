@@ -14,6 +14,10 @@ from desktop_agent_lib.vector_store import (
 
 
 def _coerce_json_value(value: Any) -> Any:
+    """
+    Coerce JSON value.
+    Returns a `Any` result.
+    """
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, list):
@@ -26,12 +30,20 @@ def _coerce_json_value(value: Any) -> Any:
 
 
 def _coerce_metadata(raw_metadata: Any) -> dict[str, Any]:
+    """
+    Coerce metadata.
+    Returns a structured mapping with operation details.
+    """
     if not isinstance(raw_metadata, dict):
         return {}
     return {str(key): _coerce_json_value(value) for key, value in raw_metadata.items()}
 
 
 def _coerce_embedding(raw_embedding: Any) -> list[float]:
+    """
+    Coerce embedding.
+    Returns an ordered collection of computed items.
+    """
     if not isinstance(raw_embedding, (list, tuple)):
         return []
 
@@ -45,6 +57,10 @@ def _coerce_embedding(raw_embedding: Any) -> list[float]:
 
 
 def _build_relative_embedding(embedding: list[float]) -> tuple[list[float], float]:
+    """
+    Build relative embedding.
+    Returns a `tuple[list[float], float]` result.
+    """
     if not embedding:
         return [], 1.0
 
@@ -57,6 +73,10 @@ def _build_relative_embedding(embedding: list[float]) -> tuple[list[float], floa
 
 
 def bootstrap_store() -> dict[str, Any]:
+    """
+    Handle bootstrap store for the current workflow.
+    Returns a structured mapping with operation details.
+    """
     store = ProjectChromaStore()
     collection = store.get_or_create_collection(
         get_default_collection_name(),
@@ -73,6 +93,10 @@ def bootstrap_store() -> dict[str, Any]:
 
 
 def reset_store() -> dict[str, Any]:
+    """
+    Reset store.
+    Returns a structured mapping with operation details.
+    """
     chroma_path = get_project_chroma_path()
     if chroma_path.exists():
         shutil.rmtree(chroma_path)
@@ -87,6 +111,10 @@ def reset_store() -> dict[str, Any]:
 
 
 def run_smoke_test() -> dict[str, Any]:
+    """
+    Run smoke test.
+    Returns a structured mapping with operation details.
+    """
     store = ProjectChromaStore()
     smoke_collection_name = f"{get_default_collection_name()}_smoke_test"
 
@@ -124,6 +152,10 @@ def run_smoke_test() -> dict[str, Any]:
 
 
 def dump_store_chunks() -> dict[str, Any]:
+    """
+    Dump store chunks.
+    Returns a structured mapping with operation details.
+    """
     store = ProjectChromaStore()
     collection_payloads: list[dict[str, Any]] = []
 
@@ -202,6 +234,11 @@ def dump_store_chunks() -> dict[str, Any]:
 
 
 def main() -> None:
+    """
+    Run the main entry-point workflow for this module.
+    Key behavior: serializes JSON payloads.
+    Performs side effects and returns no value.
+    """
     parser = argparse.ArgumentParser(description="Bootstrap and verify the local Chroma store.")
     parser.add_argument(
         "--bootstrap",

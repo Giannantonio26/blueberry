@@ -38,6 +38,10 @@ class DocumentFormatMixin:
         | type[GeneratedWorkbookDraft],
         payload: Any,
     ) -> Any:
+        """
+        Coerce grounded writer payload.
+        Returns a `Any` result.
+        """
         if not isinstance(payload, (dict, list)):
             return payload
 
@@ -75,6 +79,10 @@ class DocumentFormatMixin:
         return payload
 
     def format_specific_writer_guidance(self, output_format: str) -> str:
+        """
+        Format specific writer guidance.
+        Returns the resulting text value.
+        """
         normalized_format = (output_format or "").strip().lower()
         format_rules: dict[str, str] = {
             "txt": (
@@ -130,6 +138,11 @@ class DocumentFormatMixin:
         strip_markdown: bool = False,
         ascii_punctuation: bool = True,
     ) -> str:
+        """
+        Normalize document text into a canonical form for downstream logic.
+        Key behavior: applies regex-based parsing or normalization.
+        Returns the resulting text value.
+        """
         if not isinstance(value, str):
             return ""
 
@@ -188,6 +201,10 @@ class DocumentFormatMixin:
         strip_markdown: bool = False,
         ascii_punctuation: bool = True,
     ) -> list[str]:
+        """
+        Normalize document paragraphs into a canonical form for downstream logic.
+        Returns an ordered collection of computed items.
+        """
         cleaned_paragraphs: list[str] = []
         for paragraph in paragraphs or []:
             cleaned = self.normalize_document_text(
@@ -200,6 +217,11 @@ class DocumentFormatMixin:
         return cleaned_paragraphs
 
     def normalize_pdf_safe_text(self, value: str | None) -> str:
+        """
+        Normalize PDF safe text into a canonical form for downstream logic.
+        Key behavior: applies regex-based parsing or normalization.
+        Returns the resulting text value.
+        """
         normalized = self.normalize_document_text(
             value,
             strip_markdown=True,
@@ -244,6 +266,10 @@ class DocumentFormatMixin:
         self,
         paragraphs: list[str] | None,
     ) -> list[str]:
+        """
+        Normalize PDF safe paragraphs into a canonical form for downstream logic.
+        Returns an ordered collection of computed items.
+        """
         safe_paragraphs: list[str] = []
         for paragraph in paragraphs or []:
             safe_text = self.normalize_pdf_safe_text(paragraph)
@@ -257,6 +283,10 @@ class DocumentFormatMixin:
         allow_markup: bool = False,
         pdf_safe: bool = False,
     ) -> str:
+        """
+        Handle grounded writer style rules for the current workflow.
+        Returns the resulting text value.
+        """
         format_rule = (
             "Markdown or markup syntax is allowed only when the requested target format explicitly needs it."
             if allow_markup
@@ -279,8 +309,19 @@ class DocumentFormatMixin:
         )
 
     def grounded_writer_source_rules(self, *, output_format: str | None = None) -> str:
+        """
+        Handle grounded writer source rules for the current workflow.
+        Returns the resulting text value.
+        """
         normalized_format = (output_format or "").strip().lower()
-        if normalized_format in {"csv", "excel"}:
+        if normalized_format == "excel":
+            return (
+                "Do not include source metadata in workbook output. "
+                "Do not add source, citation, reference, or source URL/title/domain columns. "
+                "Do not include inline citation keys like [S1] in Excel cell values."
+            )
+
+        if normalized_format == "csv":
             return (
                 "Ground every factual data row with source metadata from retrieved chunks. "
                 "Add a source column for each row and populate it with citation keys like [S1] or [S1,S3]. "
@@ -309,6 +350,10 @@ class DocumentFormatMixin:
         content: str | None = None,
         paragraphs: list[str] | None = None,
     ) -> str:
+        """
+        Build text file content.
+        Returns the resulting text value.
+        """
         segments: list[str] = []
         clean_title = self.normalize_document_text(title)
         clean_content = self.normalize_document_text(content)
@@ -326,6 +371,10 @@ class DocumentFormatMixin:
         content: str | None = None,
         paragraphs: list[str] | None = None,
     ) -> list[str]:
+        """
+        Build word paragraphs.
+        Returns an ordered collection of computed items.
+        """
         compiled_paragraphs: list[str] = []
         clean_title = self.normalize_document_text(
             title,
@@ -356,6 +405,10 @@ class DocumentFormatMixin:
         return compiled_paragraphs
 
     def build_recent_conversation_excerpt(self, *, limit: int = 8) -> str:
+        """
+        Build recent conversation excerpt.
+        Returns the resulting text value.
+        """
         excerpt_lines: list[str] = []
         for message in self.agent_input.messages[-limit:]:
             content = message.content.strip()
@@ -365,6 +418,10 @@ class DocumentFormatMixin:
         return "\n".join(excerpt_lines)
 
     def format_retrieved_chunks_for_prompt(self) -> str:
+        """
+        Format retrieved chunks for prompt.
+        Returns the resulting text value.
+        """
         if not self.retrieved_chunks:
             return "No retrieved chunks were available for this step."
 
@@ -388,6 +445,10 @@ class DocumentFormatMixin:
         return "\n\n".join(formatted_chunks)
 
     def resolve_writer_model(self) -> str:
+        """
+        Resolve writer model.
+        Returns the resulting text value.
+        """
         configured_writer_model = (self.agent_input.writer_model or "").strip()
         if configured_writer_model:
             return configured_writer_model
@@ -398,6 +459,10 @@ class DocumentFormatMixin:
         content: str | None,
         paragraphs: list[str] | None,
     ) -> bool:
+        """
+        Check whether nonempty document body.
+        Returns `True` when the condition is satisfied, otherwise `False`.
+        """
         normalized_content = self.normalize_document_text(
             content,
             strip_markdown=True,
@@ -412,6 +477,10 @@ class DocumentFormatMixin:
         self,
         slides: list[PowerPointSlide] | None,
     ) -> list[PowerPointSlide]:
+        """
+        Normalize presentation slides into a canonical form for downstream logic.
+        Returns an ordered collection of computed items.
+        """
         normalized_slides: list[PowerPointSlide] = []
         for slide in slides or []:
             normalized_title = self.normalize_document_text(
@@ -440,6 +509,44 @@ class DocumentFormatMixin:
         self,
         sheets: list[ExcelSheet] | None,
     ) -> list[ExcelSheet]:
+        """
+        Sanitize workbook sheets into a safe, normalized representation.
+        Key behavior: applies regex-based parsing or normalization.
+        Returns an ordered collection of computed items.
+        """
+        citation_key_pattern = re.compile(
+            r"\[(?:\s*S\d+\s*)(?:,\s*S\d+\s*)*\]",
+            flags=re.IGNORECASE,
+        )
+
+        def strip_inline_citation_keys(cell_value: str) -> str:
+            """
+            Handle strip inline citation keys for the current workflow.
+            Key behavior: applies regex-based parsing or normalization.
+            Returns the resulting text value.
+            """
+            without_citations = citation_key_pattern.sub("", cell_value)
+            without_citations = re.sub(r"\s+([,;:.])", r"\1", without_citations)
+            return re.sub(r"\s{2,}", " ", without_citations).strip()
+
+        source_like_header_pattern = re.compile(
+            r"\b(source|citation|reference|provenance|evidence)\b",
+            flags=re.IGNORECASE,
+        )
+
+        def is_source_like_header(header_value: str) -> bool:
+            """
+            Check whether source like header.
+            Key behavior: applies regex-based parsing or normalization.
+            Returns `True` when the condition is satisfied, otherwise `False`.
+            """
+            normalized_header = re.sub(
+                r"[\s_\-]+",
+                " ",
+                (header_value or "").strip().lower(),
+            )
+            return bool(normalized_header and source_like_header_pattern.search(normalized_header))
+
         sanitized_sheets: list[ExcelSheet] = []
         for index, sheet in enumerate(sheets or [], start=1):
             sheet_name = self.normalize_document_text(sheet.name) or f"Sheet{index}"
@@ -448,27 +555,62 @@ class DocumentFormatMixin:
                 if not isinstance(row, list):
                     continue
                 normalized_row = [
-                    self.normalize_document_text(str(cell)) if cell is not None else ""
+                    strip_inline_citation_keys(
+                        self.normalize_document_text(str(cell))
+                    )
+                    if cell is not None
+                    else ""
                     for cell in row
                 ]
                 if any(cell for cell in normalized_row):
                     normalized_rows.append(normalized_row)
             if normalized_rows:
+                header_row = normalized_rows[0]
+                source_column_indexes = {
+                    column_index
+                    for column_index, header_value in enumerate(header_row)
+                    if is_source_like_header(header_value)
+                }
+                if source_column_indexes:
+                    filtered_rows: list[list[str]] = []
+                    for row in normalized_rows:
+                        filtered_row = [
+                            cell
+                            for column_index, cell in enumerate(row)
+                            if column_index not in source_column_indexes
+                        ]
+                        if any(cell for cell in filtered_row):
+                            filtered_rows.append(filtered_row)
+                    normalized_rows = filtered_rows
+            if normalized_rows:
                 sanitized_sheets.append(ExcelSheet(name=sheet_name, rows=normalized_rows))
         return sanitized_sheets
 
     def validate_pdf_file_args(self, args: WritePdfFileArgs) -> str | None:
+        """
+        Validate PDF file arguments against runtime rules and constraints.
+        Returns a `str | None` result.
+        """
         normalized_title = self.normalize_pdf_safe_text(args.title)
         normalized_content = self.normalize_pdf_safe_text(args.content)
         normalized_paragraphs = self.normalize_pdf_safe_paragraphs(args.paragraphs)
-        if normalized_title or normalized_content or normalized_paragraphs:
+        if normalized_content or normalized_paragraphs:
             return None
+        if normalized_title:
+            return (
+                "The PDF draft has a title but no document body. "
+                "Provide non-empty content or paragraphs."
+            )
         return (
             "The PDF draft must include at least one non-empty title, content block, "
             "or paragraph."
         )
 
     def validate_word_file_args(self, args: WriteWordFileArgs) -> str | None:
+        """
+        Validate word file arguments against runtime rules and constraints.
+        Returns a `str | None` result.
+        """
         normalized_title = self.normalize_document_text(
             args.title,
             strip_markdown=True,
@@ -481,6 +623,10 @@ class DocumentFormatMixin:
         )
 
     def validate_text_file_args(self, args: WriteTextFileArgs) -> str | None:
+        """
+        Validate text file arguments against runtime rules and constraints.
+        Returns a `str | None` result.
+        """
         normalized_content = self.normalize_document_text(args.content)
         if normalized_content:
             return None
@@ -492,6 +638,10 @@ class DocumentFormatMixin:
         *,
         minimum_slide_count: int = 1,
     ) -> str | None:
+        """
+        Validate powerpoint file arguments against runtime rules and constraints.
+        Returns a `str | None` result.
+        """
         normalized_slides = self.normalize_presentation_slides(args.slides)
         normalized_title = self.normalize_document_text(
             args.title,
@@ -510,12 +660,21 @@ class DocumentFormatMixin:
         return None
 
     def validate_excel_file_args(self, args: WriteExcelFileArgs) -> str | None:
+        """
+        Validate excel file arguments against runtime rules and constraints.
+        Returns a `str | None` result.
+        """
         sanitized_sheets = self.sanitize_workbook_sheets(args.sheets)
         if not sanitized_sheets:
             return None
         return None
 
     def extract_json_candidate_from_text(self, raw_content: str) -> str | None:
+        """
+        Extract JSON candidate from text.
+        Key behavior: applies regex-based parsing or normalization.
+        Returns a `str | None` result.
+        """
         normalized = (raw_content or "").strip()
         if not normalized:
             return None
@@ -563,6 +722,11 @@ class DocumentFormatMixin:
         return None
 
     def parse_grounded_writer_payload(self, raw_content: str) -> Any:
+        """
+        Parse grounded writer payload.
+        Key behavior: parses JSON payloads and raises explicit errors on invalid or unsupported states.
+        Returns a `Any` result.
+        """
         normalized = (raw_content or "").strip()
         if not normalized:
             raise ValueError("Writer response did not include a JSON payload.")
@@ -598,6 +762,10 @@ class DocumentFormatMixin:
         raise ValueError("Writer response did not include a JSON payload.")
 
     def build_writer_retry_feedback(self, issue: str) -> str:
+        """
+        Build writer retry feedback.
+        Returns the resulting text value.
+        """
         normalized_issue = " ".join((issue or "").split()).strip() or "unknown issue"
         return (
             "Return corrected JSON matching the schema exactly. "
@@ -615,6 +783,11 @@ class DocumentFormatMixin:
         tool_payload: dict[str, Any],
         retry_feedback: str | None = None,
     ) -> GeneratedDocumentDraft | GeneratedPresentationDraft | GeneratedWorkbookDraft:
+        """
+        Handle call grounded writer for the current workflow.
+        Key behavior: serializes JSON payloads and calls the configured LLM endpoint.
+        Returns a `GeneratedDocumentDraft | GeneratedPresentationDraft | GeneratedWorkbookDraft` result.
+        """
         latest_user_request = get_latest_user_message(self.agent_input.messages)
         recent_conversation = self.build_recent_conversation_excerpt()
         retrieved_context = self.format_retrieved_chunks_for_prompt()
@@ -665,6 +838,10 @@ class DocumentFormatMixin:
         *,
         target_format: str | None = None,
     ) -> WriteTextFileArgs:
+        """
+        Prepare text file from retrieved chunks.
+        Returns a `WriteTextFileArgs` result.
+        """
         normalized_format = (target_format or "").strip().lower()
         allow_markup = normalized_format in {"md", "markdown", "html", "xml"}
         retry_feedback: str | None = None
@@ -713,6 +890,10 @@ class DocumentFormatMixin:
     def prepare_word_file_from_retrieved_chunks(
         self, args: WriteWordFileArgs
     ) -> WriteWordFileArgs:
+        """
+        Prepare word file from retrieved chunks.
+        Returns a `WriteWordFileArgs` result.
+        """
         retry_feedback: str | None = None
         for _ in range(self.GROUNDED_WRITER_MAX_ATTEMPTS):
             try:
@@ -787,6 +968,10 @@ class DocumentFormatMixin:
     def prepare_pdf_file_from_retrieved_chunks(
         self, args: WritePdfFileArgs
     ) -> WritePdfFileArgs:
+        """
+        Prepare PDF file from retrieved chunks.
+        Returns a `WritePdfFileArgs` result.
+        """
         retry_feedback: str | None = None
         for _ in range(self.GROUNDED_WRITER_MAX_ATTEMPTS):
             try:
@@ -847,6 +1032,10 @@ class DocumentFormatMixin:
     def prepare_powerpoint_file_from_retrieved_chunks(
         self, args: WritePowerPointFileArgs
     ) -> WritePowerPointFileArgs:
+        """
+        Prepare powerpoint file from retrieved chunks.
+        Returns a `WritePowerPointFileArgs` result.
+        """
         minimum_slide_count = 1
         retry_feedback: str | None = None
         for _ in range(self.GROUNDED_WRITER_MAX_ATTEMPTS):
@@ -937,6 +1126,10 @@ class DocumentFormatMixin:
     def prepare_excel_file_from_retrieved_chunks(
         self, args: WriteExcelFileArgs
     ) -> WriteExcelFileArgs:
+        """
+        Prepare excel file from retrieved chunks.
+        Returns a `WriteExcelFileArgs` result.
+        """
         retry_feedback: str | None = None
         for _ in range(self.GROUNDED_WRITER_MAX_ATTEMPTS):
             try:
@@ -989,6 +1182,11 @@ class DocumentFormatMixin:
         )
 
     def write_docx_file(self, file_path: Path, paragraphs: list[str]) -> None:
+        """
+        Write DOCX file.
+        Key behavior: builds or reads ZIP container content.
+        Performs side effects and returns no value.
+        """
         document_xml = self.build_docx_document_xml(paragraphs)
 
         with zipfile.ZipFile(file_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -1011,6 +1209,11 @@ class DocumentFormatMixin:
             archive.writestr("word/document.xml", document_xml)
 
     def read_docx_text(self, file_path: Path) -> str:
+        """
+        Read DOCX text.
+        Key behavior: builds or reads ZIP container content and raises explicit errors on invalid or unsupported states.
+        Returns the resulting text value.
+        """
         try:
             with zipfile.ZipFile(file_path) as archive:
                 document_xml = archive.read("word/document.xml")
@@ -1036,12 +1239,21 @@ class DocumentFormatMixin:
         return "\n\n".join(paragraph_texts)
 
     def read_pdf_text(self, file_path: Path) -> str:
+        """
+        Read PDF text.
+        Key behavior: applies regex-based parsing or normalization and raises explicit errors on invalid or unsupported states.
+        Returns the resulting text value.
+        """
         raw_text = file_path.read_bytes().decode("latin-1", errors="ignore")
         fragments = re.findall(r"\((.*?)(?<!\\)\)\s*Tj", raw_text, flags=re.DOTALL)
         if not fragments:
             raise ValueError(f"The .pdf file does not contain readable text content: {file_path}")
 
         def unescape_fragment(value: str) -> str:
+            """
+            Handle unescape fragment for the current workflow.
+            Returns the resulting text value.
+            """
             restored = (
                 value.replace("\\\\", "\\")
                 .replace("\\(", "(")
@@ -1059,6 +1271,11 @@ class DocumentFormatMixin:
         return "\n".join(cleaned_lines)
 
     def read_pptx_text(self, file_path: Path) -> str:
+        """
+        Read PPTX text.
+        Key behavior: builds or reads ZIP container content and raises explicit errors on invalid or unsupported states.
+        Returns the resulting text value.
+        """
         slide_pattern = re.compile(r"^ppt/slides/slide(\d+)\.xml$")
         slide_texts: list[str] = []
 
@@ -1095,6 +1312,10 @@ class DocumentFormatMixin:
         return "\n\n".join(slide_texts)
 
     def escape_pdf_text(self, value: str) -> str:
+        """
+        Handle escape PDF text for the current workflow.
+        Returns the resulting text value.
+        """
         ascii_text = (
             self.normalize_pdf_safe_text(value)
             .encode("ascii", "ignore")
@@ -1114,6 +1335,10 @@ class DocumentFormatMixin:
         content: str | None = None,
         paragraphs: list[str] | None = None,
     ) -> list[list[tuple[int, int, int, str]]]:
+        """
+        Build PDF pages.
+        Returns an ordered collection of computed items.
+        """
         pages: list[list[tuple[int, int, int, str]]] = [[]]
         current_page_index = 0
         current_y = 740
@@ -1163,6 +1388,10 @@ class DocumentFormatMixin:
         content: str | None = None,
         paragraphs: list[str] | None = None,
     ) -> int:
+        """
+        Write PDF document.
+        Returns a `int` result.
+        """
         pages = self.build_pdf_pages(title=title, content=content, paragraphs=paragraphs)
         page_count = max(len(pages), 1)
         font_object_number = 3 + (page_count * 2)
@@ -1229,6 +1458,10 @@ class DocumentFormatMixin:
         return page_count
 
     def build_powerpoint_body_lines(self, slide: PowerPointSlide) -> list[str]:
+        """
+        Build powerpoint body lines.
+        Returns an ordered collection of computed items.
+        """
         body_lines: list[str] = []
         if isinstance(slide.content, str) and slide.content.strip():
             body_lines.extend(
@@ -1246,6 +1479,10 @@ class DocumentFormatMixin:
     def build_powerpoint_text_paragraph_xml(
         self, lines: list[str], *, font_size: int, bold: bool = False
     ) -> str:
+        """
+        Build powerpoint text paragraph XML.
+        Returns the resulting text value.
+        """
         paragraphs = []
         for line in lines:
             paragraphs.append(
@@ -1258,6 +1495,10 @@ class DocumentFormatMixin:
         return "".join(paragraphs)
 
     def build_pptx_slide_xml(self, slide: PowerPointSlide, slide_index: int) -> str:
+        """
+        Build PPTX slide XML.
+        Returns the resulting text value.
+        """
         title = (slide.title or "").strip()
         body_lines = self.build_powerpoint_body_lines(slide)
         title_shape = ""
@@ -1356,6 +1597,10 @@ class DocumentFormatMixin:
         )
 
     def build_presentation_core_xml(self, title: str) -> str:
+        """
+        Build presentation core XML.
+        Returns the resulting text value.
+        """
         timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
@@ -1377,6 +1622,10 @@ class DocumentFormatMixin:
     def build_presentation_app_xml(
         self, slides: list[PowerPointSlide], presentation_title: str
     ) -> str:
+        """
+        Build presentation app XML.
+        Returns the resulting text value.
+        """
         part_titles = "".join(
             f"<vt:lpstr>{escape((slide.title or '').strip() or f'Slide {index}')}</vt:lpstr>"
             for index, slide in enumerate(slides, start=1)
@@ -1415,6 +1664,10 @@ class DocumentFormatMixin:
         )
 
     def build_presentation_xml(self, slide_count: int) -> str:
+        """
+        Build presentation XML.
+        Returns the resulting text value.
+        """
         slide_entries = "\n    ".join(
             f'<p:sldId id="{255 + index}" r:id="rId{index + 1}"/>'
             for index in range(1, slide_count + 1)
@@ -1434,6 +1687,10 @@ class DocumentFormatMixin:
 </p:presentation>""" % slide_entries
 
     def build_presentation_rels_xml(self, slide_count: int) -> str:
+        """
+        Build presentation rels XML.
+        Returns the resulting text value.
+        """
         relationships = [
             '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>'
         ]
@@ -1447,6 +1704,10 @@ class DocumentFormatMixin:
 </Relationships>""" % "\n  ".join(relationships)
 
     def build_slide_master_xml(self) -> str:
+        """
+        Build slide master XML.
+        Returns the resulting text value.
+        """
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -1483,6 +1744,10 @@ class DocumentFormatMixin:
 </p:sldMaster>"""
 
     def build_slide_master_rels_xml(self) -> str:
+        """
+        Build slide master rels XML.
+        Returns the resulting text value.
+        """
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
@@ -1490,6 +1755,10 @@ class DocumentFormatMixin:
 </Relationships>"""
 
     def build_slide_layout_xml(self) -> str:
+        """
+        Build slide layout XML.
+        Returns the resulting text value.
+        """
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -1518,12 +1787,20 @@ class DocumentFormatMixin:
 </p:sldLayout>"""
 
     def build_slide_layout_rels_xml(self) -> str:
+        """
+        Build slide layout rels XML.
+        Returns the resulting text value.
+        """
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
 </Relationships>"""
 
     def build_presentation_theme_xml(self) -> str:
+        """
+        Build presentation theme XML.
+        Returns the resulting text value.
+        """
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Blueberry Theme">
   <a:themeElements>
@@ -1583,6 +1860,10 @@ class DocumentFormatMixin:
     def build_pptx_package(
         self, slides: list[PowerPointSlide], presentation_title: str
     ) -> dict[str, str]:
+        """
+        Build PPTX package.
+        Returns a structured mapping with operation details.
+        """
         slide_count = len(slides)
         slide_overrides = "\n  ".join(
             f'<Override PartName="/ppt/slides/slide{index}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>'
@@ -1640,6 +1921,11 @@ class DocumentFormatMixin:
         slides: list[PowerPointSlide],
         presentation_title: str,
     ) -> None:
+        """
+        Write PPTX file.
+        Key behavior: builds or reads ZIP container content.
+        Performs side effects and returns no value.
+        """
         package = self.build_pptx_package(slides, presentation_title)
         with zipfile.ZipFile(file_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for internal_path, content in package.items():
@@ -1647,6 +1933,10 @@ class DocumentFormatMixin:
 
 
     def build_docx_document_xml(self, paragraphs: list[str]) -> str:
+        """
+        Build DOCX document XML.
+        Returns the resulting text value.
+        """
         paragraph_xml = []
         for paragraph in paragraphs:
             runs = paragraph.split("\n")

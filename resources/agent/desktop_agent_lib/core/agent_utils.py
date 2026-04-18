@@ -56,6 +56,10 @@ NON_DOCUMENT_TEXT_OUTPUT_HINT_PATTERN = re.compile(
 
 
 def get_latest_user_message(messages: list[HistoryMessage]) -> str:
+    """
+    Return latest user message.
+    Returns the resulting text value.
+    """
     for message in reversed(messages):
         if message.role == "user":
             return message.content.strip()
@@ -63,6 +67,11 @@ def get_latest_user_message(messages: list[HistoryMessage]) -> str:
 
 
 def is_desktop_mutation_request(user_request: str) -> bool:
+    """
+    Check whether desktop mutation request.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns `True` when the condition is satisfied, otherwise `False`.
+    """
     return bool(
         re.search(
             r"(create|write|save|export|generate|build|draft|make|edit|update|convert|reformat|transform).*(file|files|folder|document|report|spreadsheet|excel|xlsx|csv|word|docx|pdf|powerpoint|presentation|slide|slides|ppt|pptx|desktop|markdown|md|txt|json|html|xml|format)"
@@ -81,6 +90,11 @@ def is_desktop_mutation_request(user_request: str) -> bool:
 def infer_required_desktop_action_kind(
     user_request: str,
 ) -> DesktopRequiredActionKind | None:
+    """
+    Infer required desktop action kind.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns a `DesktopRequiredActionKind | None` result.
+    """
     normalized_request = " ".join(user_request.split()).strip()
     if not normalized_request:
         return None
@@ -125,6 +139,10 @@ def infer_required_desktop_action_kind(
 
 
 def infer_requested_output_extensions(user_request: str) -> set[str]:
+    """
+    Infer requested output extensions.
+    Returns a `set[str]` result.
+    """
     normalized = " ".join(user_request.lower().split())
     if not normalized:
         return set()
@@ -164,6 +182,10 @@ def infer_requested_output_extensions(user_request: str) -> set[str]:
 
 
 def user_explicitly_mentions_known_output_format(user_request: str) -> bool:
+    """
+    Handle user explicitly mentions known output format for the current workflow.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = " ".join(user_request.split())
     if not normalized:
         return False
@@ -171,6 +193,10 @@ def user_explicitly_mentions_known_output_format(user_request: str) -> bool:
 
 
 def request_mentions_explicit_file_extension(user_request: str) -> bool:
+    """
+    Request mentions explicit file extension.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = " ".join(user_request.split())
     if not normalized:
         return False
@@ -178,6 +204,10 @@ def request_mentions_explicit_file_extension(user_request: str) -> bool:
 
 
 def request_likely_non_document_text_output(user_request: str) -> bool:
+    """
+    Request likely non document text output.
+    Returns a boolean status for the requested check or operation.
+    """
     normalized = " ".join(user_request.split())
     if not normalized:
         return False
@@ -185,6 +215,10 @@ def request_likely_non_document_text_output(user_request: str) -> bool:
 
 
 def parse_requested_output_count(raw_count: str) -> int | None:
+    """
+    Parse requested output count.
+    Returns a `int | None` result.
+    """
     normalized = raw_count.strip().lower()
     if not normalized:
         return None
@@ -195,6 +229,11 @@ def parse_requested_output_count(raw_count: str) -> int | None:
 
 
 def infer_requested_output_count(user_request: str) -> int | None:
+    """
+    Infer requested output count.
+    Key behavior: applies regex-based parsing or normalization.
+    Returns a `int | None` result.
+    """
     normalized = " ".join(user_request.lower().split())
     if not normalized:
         return None

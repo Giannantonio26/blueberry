@@ -16,12 +16,20 @@ LOCAL_TEMP_DIR = PROJECT_ROOT / ".tmp" / "python-setup"
 
 
 def get_venv_python_path() -> Path:
+    """
+    Return venv python path.
+    Returns a resolved filesystem path value.
+    """
     if sys.platform == "win32":
         return VENV_DIR / "Scripts" / "python.exe"
     return VENV_DIR / "bin" / "python"
 
 
 def ensure_virtualenv() -> Path:
+    """
+    Ensure virtualenv.
+    Returns a resolved filesystem path value.
+    """
     venv_python = get_venv_python_path()
     if venv_python.exists():
         return venv_python
@@ -37,12 +45,20 @@ def ensure_virtualenv() -> Path:
 
 
 def run_command(command: list[str]) -> None:
+    """
+    Run command.
+    Performs side effects and returns no value.
+    """
     LOCAL_TEMP_DIR.mkdir(parents=True, exist_ok=True)
     environment = build_environment()
     subprocess.check_call(command, cwd=PROJECT_ROOT, env=environment)
 
 
 def build_environment() -> dict[str, str]:
+    """
+    Build environment.
+    Returns a structured mapping with operation details.
+    """
     LOCAL_TEMP_DIR.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()
     local_temp_path = str(LOCAL_TEMP_DIR)
@@ -53,6 +69,11 @@ def build_environment() -> dict[str, str]:
 
 
 def ensure_pip(venv_python: Path) -> None:
+    """
+    Ensure pip.
+    Key behavior: invokes external processes.
+    Performs side effects and returns no value.
+    """
     pip_check = subprocess.run(
         [str(venv_python), "-m", "pip", "--version"],
         cwd=PROJECT_ROOT,
@@ -68,6 +89,10 @@ def ensure_pip(venv_python: Path) -> None:
 
 
 def main() -> None:
+    """
+    Run the main entry-point workflow for this module.
+    Performs side effects and returns no value.
+    """
     parser = argparse.ArgumentParser(
         description="Create the local Python environment and install Blueberry agent dependencies."
     )
