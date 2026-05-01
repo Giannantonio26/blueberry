@@ -86,17 +86,18 @@ Blueberry is not just a conversational assistant. It is a task-completion agent 
 
 ```mermaid
 flowchart TB
-  U["User request"] --> H["Host orchestrator"]
+  U["User request"] --> H["Electron host<br/>session counters + host tools"]
+  H --> PY["Python agent runtime<br/>prompt construction + tool dispatch"]
 
   subgraph CTX["Context provided to the agent at each iteration"]
     P1["Static policy prompt<br/>capabilities, hard rules, completion rules"]
     P2["Workflow prompt<br/>iteration #, search used/min/max,<br/>force-write mode, visited sites, pending outputs"]
-    P3["Runtime state<br/>conversation history, page URL/article title,<br/> caches"]
+    P3["Runtime state<br/>conversation history, page URL/article title,<br/>visited sites, retrieved chunks, desktop outputs"]
   end
 
   subgraph LOOP["ReAct loop"]
     B["Build iteration message"]
-    L["Plan next step<br/>gemini-3-flash-preview"]
+    L["Plan next step<br/>configured Gemini model<br/>default gemini-3-flash-preview"]
     K{"Select exactly one tool action"}
     X["Execute chosen tool"]
     O["Observe tool result"]
@@ -107,13 +108,13 @@ flowchart TB
     D -- "No" --> B
   end
 
-  H --> P1
-  H --> P2
-  H --> P3
+  PY --> P1
+  PY --> P2
+  PY --> P3
   P1 --> B
   P2 --> B
   P3 --> B
-  D -- "Yes" --> F["Final synthesis<br/>gemini-3-flash-preview"]
+  D -- "Yes" --> F["Final synthesis<br/>configured Gemini model<br/>default gemini-3-flash-preview"]
 
   subgraph TOOLS["Main tool categories"]
     T1["Web research<br/>read_web_page + google_search_and_collect"]
@@ -135,6 +136,7 @@ flowchart TB
     SRC["Capture source text + metadata"]
     IDX["Indexing<br/>chunk 1000, overlap 200<br/>safety screening (gemini-3-flash-preview)<br/>embeddings (gemini-embedding-001)"]
     VS[("Vector store")]
+    SEL["Source-domain selector"]
     RETQ["3-query retrieval<br/>top-5/query -> merge top-12"]
   end
 
@@ -151,7 +153,7 @@ flowchart TB
   T1 --> SRC --> O
   SRC --> V
 
-  T2 --> RETQ
+  T2 --> SEL --> RETQ
   VS --> RETQ
   RETQ --> R
   RETQ --> O
@@ -161,13 +163,13 @@ flowchart TB
 
   T4 --> O
   T5 --> O
-  T5 -->|"clear session caches"| V
-  T5 -->|"clear session caches"| R
+  T5 -->|"runtime close clears retrieved chunks"| R
+  T5 -->|"final result asks host to close session"| H
+  H -->|"clear visited sites + search counters"| V
 
   V --> P3
   R --> P3
   FS --> P3
-  VS --> P3
 ```
 
 
