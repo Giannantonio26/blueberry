@@ -140,7 +140,7 @@ flowchart TB
     SAFE["Safety screen<br/>prompt-injection check<br/>gemini-3-flash-preview"]
     KEEP{"Safe chunk?"}
     EMB["Embed chunk<br/>gemini-embedding-001"]
-    IDX["Index chunk<br/>text + metadata + embedding"]
+    IDX["Store chunk<br/>content + metadata + embedding"]
     VS[("Vector store")]
     SEL["Source selector"]
     RETQ["Retrieve<br/>3 queries, 5 each<br/>merge 12"]
