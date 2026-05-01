@@ -136,7 +136,7 @@ flowchart TB
     COK["Accept cookies"]
     DISC["Skip unusable pages<br/>visited, blocked, captcha"]
     SRC["Source text<br/>+ metadata"]
-    CHK["Text Splittinig into Chunks<br/>size 1000<br/>overlap 200"]
+    CHK["Chunk Splitting<br/>size 1000<br/>overlap 200"]
     SAFE["Safety screen<br/>prompt-injection check<br/>gemini-3-flash-preview"]
     KEEP{"Safe chunk?"}
     EMB["Embed chunk<br/>gemini-embedding-001"]
