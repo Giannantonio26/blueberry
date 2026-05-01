@@ -101,7 +101,6 @@ flowchart TB
     O["Observe result"]
     D{"Done?"}
     B --> L --> X
-    X -->|"state side effects"| P3
     O --> D
     D -- "No" --> B
   end
@@ -115,11 +114,11 @@ flowchart TB
   D -- "Yes" --> F["Final synthesis<br/>gemini-3-flash-preview"]
 
   subgraph TOOLS["Tool categories"]
-    T1["Web<br/>read + search"]
-    T2["Retrieval<br/>chunks"]
-    T3["Files<br/>write/edit/convert"]
-    T4["Desktop<br/>inspect/nav"]
-    T5["Session<br/>close"]
+    T1["Web<br/>read_web_page<br/>google_search_and_collect"]
+    T2["Retrieval<br/>retrieve_relevant_chunks"]
+    T3["Files<br/>write_pdf_file<br/>edit_desktop_file<br/>convert_desktop_file_format"]
+    T4["Desktop<br/>list_desktop_entries<br/>show_desktop_folder"]
+    T5["Session<br/>close_agent_session"]
   end
 
   X --> T1
@@ -127,6 +126,11 @@ flowchart TB
   X --> T3
   X --> T4
   X --> T5
+  T1 -->|"state side effects"| P3
+  T2 -->|"state side effects"| P3
+  T3 -->|"state side effects"| P3
+  T4 -->|"state side effects"| P3
+  T5 -->|"state side effects"| P3
 
   subgraph RAG["Research + RAG"]
     COK["Accept cookies"]
