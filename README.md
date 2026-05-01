@@ -91,18 +91,17 @@ flowchart TB
   subgraph CTX["Per-iteration context"]
     P1["Policy<br/>capabilities + rules"]
     P2["Workflow<br/>step, search budget,<br/>pending outputs"]
-    P3["State<br/>history, page, caches,<br/>desktop outputs"]
+    P3["State<br/>history, page URL/title,<br/>visited websites, retrieved chunks,<br/>search counts, force-write mode,<br/>pending outputs, changed files"]
   end
 
   subgraph LOOP["ReAct loop"]
     B["Build message"]
-    L["Plan<br/>configured Gemini<br/>default gemini-3-flash-preview"]
-    K{"One tool?"}
+    L["Plan<br/>gemini-3-flash-preview"]
     X["Execute tool"]
     O["Observe result"]
     U2["Update state"]
     D{"Done?"}
-    B --> L --> K --> X
+    B --> L --> X
     O --> U2 --> D
     D -- "No" --> B
   end
@@ -113,7 +112,7 @@ flowchart TB
   P1 --> B
   P2 --> B
   P3 --> B
-  D -- "Yes" --> F["Final synthesis<br/>configured Gemini<br/>default gemini-3-flash-preview"]
+  D -- "Yes" --> F["Final synthesis<br/>gemini-3-flash-preview"]
 
   subgraph TOOLS["Tool categories"]
     T1["Web<br/>read + search"]
@@ -133,7 +132,11 @@ flowchart TB
     COK["Accept cookies"]
     DISC["Skip unusable pages<br/>visited, blocked, captcha"]
     SRC["Source text<br/>+ metadata"]
-    IDX["Index<br/>1000/200 chunks<br/>safety + embeddings"]
+    CHK["Chunk source<br/>size 1000<br/>overlap 200"]
+    SAFE["Safety screen<br/>prompt-injection check<br/>gemini-3-flash-preview"]
+    KEEP{"Safe chunk?"}
+    EMB["Embed chunk<br/>gemini-embedding-001"]
+    IDX["Index chunk<br/>text + metadata + embedding"]
     VS[("Vector store")]
     SEL["Source selector"]
     RETQ["Retrieve<br/>3 queries, 5 each<br/>merge 12"]
@@ -145,10 +148,12 @@ flowchart TB
     FS[("Output state")]
   end
 
-  V[("Visited cache")]
+  V[("Visited websites cache")]
   R[("Chunk cache")]
 
-  T1 --> COK --> DISC --> SRC --> IDX --> VS
+  T1 --> COK --> DISC --> SRC --> CHK --> SAFE --> KEEP
+  KEEP -- "Yes" --> EMB --> IDX --> VS
+  KEEP -- "No" --> O
   T1 --> SRC --> O
   SRC --> V
 
