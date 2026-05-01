@@ -86,22 +86,21 @@ Blueberry is not just a conversational assistant. It is a task-completion agent 
 
 ```mermaid
 flowchart TB
-  U["User request"] --> H["Electron host<br/>session counters + host tools"]
-  H --> PY["Python agent runtime<br/>prompt construction + tool dispatch"]
+  U["User request"] --> PY["Agent runtime<br/>prompts + dispatch"]
 
-  subgraph CTX["Context provided to the agent at each iteration"]
-    P1["Static policy prompt<br/>capabilities, hard rules, completion rules"]
-    P2["Workflow prompt<br/>iteration #, search used/min/max,<br/>force-write mode, visited sites, pending outputs"]
-    P3["Runtime state<br/>conversation history, page URL/article title,<br/>visited sites, retrieved chunks, desktop outputs"]
+  subgraph CTX["Per-iteration context"]
+    P1["Policy<br/>capabilities + rules"]
+    P2["Workflow<br/>step, search budget,<br/>pending outputs"]
+    P3["State<br/>history, page, caches,<br/>desktop outputs"]
   end
 
   subgraph LOOP["ReAct loop"]
-    B["Build iteration message"]
-    L["Plan next step<br/>configured Gemini model<br/>default gemini-3-flash-preview"]
-    K{"Select exactly one tool action"}
-    X["Execute chosen tool"]
-    O["Observe tool result"]
-    U2["Update state + caches"]
+    B["Build message"]
+    L["Plan<br/>configured Gemini<br/>default gemini-3-flash-preview"]
+    K{"One tool?"}
+    X["Execute tool"]
+    O["Observe result"]
+    U2["Update state"]
     D{"Done?"}
     B --> L --> K --> X
     O --> U2 --> D
@@ -114,14 +113,14 @@ flowchart TB
   P1 --> B
   P2 --> B
   P3 --> B
-  D -- "Yes" --> F["Final synthesis<br/>configured Gemini model<br/>default gemini-3-flash-preview"]
+  D -- "Yes" --> F["Final synthesis<br/>configured Gemini<br/>default gemini-3-flash-preview"]
 
-  subgraph TOOLS["Main tool categories"]
-    T1["Web research<br/>read_web_page + google_search_and_collect"]
-    T2["Retrieval<br/>retrieve_relevant_chunks"]
-    T3["Generation<br/>write/edit/convert tools"]
-    T4["Desktop inspect/navigation"]
-    T5["Session control<br/>close_agent_session"]
+  subgraph TOOLS["Tool categories"]
+    T1["Web<br/>read + search"]
+    T2["Retrieval<br/>chunks"]
+    T3["Files<br/>write/edit/convert"]
+    T4["Desktop<br/>inspect/nav"]
+    T5["Session<br/>close"]
   end
 
   X --> T1
@@ -130,24 +129,24 @@ flowchart TB
   X --> T4
   X --> T5
 
-  subgraph RAG["Research + RAG semantics"]
-    COK["Automatic cookie acceptance"]
-    DISC["Discard strategy<br/>revisited, blocked/non-HTML,<br/>timeouts/captcha/no usable text"]
-    SRC["Capture source text + metadata"]
-    IDX["Indexing<br/>chunk 1000, overlap 200<br/>safety screening (gemini-3-flash-preview)<br/>embeddings (gemini-embedding-001)"]
+  subgraph RAG["Research + RAG"]
+    COK["Accept cookies"]
+    DISC["Skip unusable pages<br/>visited, blocked, captcha"]
+    SRC["Source text<br/>+ metadata"]
+    IDX["Index<br/>1000/200 chunks<br/>safety + embeddings"]
     VS[("Vector store")]
-    SEL["Source-domain selector"]
-    RETQ["3-query retrieval<br/>top-5/query -> merge top-12"]
+    SEL["Source selector"]
+    RETQ["Retrieve<br/>3 queries, 5 each<br/>merge 12"]
   end
 
-  subgraph GEN["Grounded generation semantics"]
-    WC["Writer context<br/>request + recent history + retrieved chunks + tool payload"]
-    WL["Writer model<br/>gemini-2.5-flash"]
-    FS[("Desktop output state")]
+  subgraph GEN["Grounded generation"]
+    WC["Writer context<br/>request + chunks + payload"]
+    WL["Writer<br/>gemini-2.5-flash"]
+    FS[("Output state")]
   end
 
-  V[("Visited websites cache")]
-  R[("Retrieved chunks cache")]
+  V[("Visited cache")]
+  R[("Chunk cache")]
 
   T1 --> COK --> DISC --> SRC --> IDX --> VS
   T1 --> SRC --> O
@@ -163,9 +162,8 @@ flowchart TB
 
   T4 --> O
   T5 --> O
-  T5 -->|"runtime close clears retrieved chunks"| R
-  T5 -->|"final result asks host to close session"| H
-  H -->|"clear visited sites + search counters"| V
+  T5 -->|"clear chunks"| R
+  T5 -->|"clear visits + counters"| V
 
   V --> P3
   R --> P3
