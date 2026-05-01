@@ -126,11 +126,11 @@ flowchart TB
   X --> T3
   X --> T4
   X --> T5
-  T1 -->|"state side effects"| P3
-  T2 -->|"state side effects"| P3
-  T3 -->|"state side effects"| P3
-  T4 -->|"state side effects"| P3
-  T5 -->|"state side effects"| P3
+  T1 -->|"updates runtime state"| P3
+  T2 -->|"updates runtime state"| P3
+  T3 -->|"updates runtime state"| P3
+  T4 -->|"updates runtime state"| P3
+  T5 -->|"updates runtime state"| P3
 
   subgraph RAG["Research + RAG"]
     COK["Accept cookies"]
