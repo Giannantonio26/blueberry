@@ -143,7 +143,11 @@ flowchart TB
     IDX["Store chunk<br/>content + metadata + embedding"]
     VS[("Vector store")]
     SEL["Source selector"]
-    RETQ["Retrieve<br/>3 queries, 5 each<br/>merge 12"]
+    MQ["Generate 3 queries"]
+    RQ["Retrieve per query<br/>score chunks<br/>top 5 each"]
+    MERGE["Merge scored chunks"]
+    DEDUPE["Remove duplicates"]
+    PRUNE["Prune by relevance<br/>top 12"]
   end
 
   subgraph GEN["Grounded generation"]
@@ -161,10 +165,11 @@ flowchart TB
   T1 --> SRC --> O
   SRC --> V
 
-  T2 --> SEL --> RETQ
-  VS --> RETQ
-  RETQ --> R
-  RETQ --> O
+  T2 --> SEL --> MQ --> RQ
+  VS --> RQ
+  RQ --> MERGE --> DEDUPE --> PRUNE
+  PRUNE --> R
+  PRUNE --> O
 
   T3 --> WC --> WL --> FS --> O
   R --> WC
