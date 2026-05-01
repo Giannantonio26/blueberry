@@ -99,11 +99,10 @@ flowchart TB
     L["Plan<br/>gemini-3-flash-preview"]
     X["Execute tool"]
     O["Observe result"]
-    U2["Update state"]
     D{"Done?"}
     B --> L --> X
-    O --> U2 --> D
-    U2 --> P3
+    X -->|"state side effects"| P3
+    O --> D
     D -- "No" --> B
   end
 
