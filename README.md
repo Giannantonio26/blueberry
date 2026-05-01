@@ -91,7 +91,7 @@ flowchart TB
   subgraph CTX["Per-iteration context"]
     P1["Policy<br/>capabilities + rules"]
     P2["Workflow<br/>step, search budget,<br/>pending outputs"]
-    P3["State<br/>history, page URL/title,<br/>visited websites, retrieved chunks,<br/>search counts, force-write mode,<br/>pending outputs, changed files"]
+    P3["State<br/>chat history, visited websites,<br/>retrieved chunks, web search counts,<br/>force-write mode, pending outputs, <br/>changed files"]
   end
 
   subgraph LOOP["ReAct loop"]
@@ -103,6 +103,7 @@ flowchart TB
     D{"Done?"}
     B --> L --> X
     O --> U2 --> D
+    U2 --> P3
     D -- "No" --> B
   end
 
