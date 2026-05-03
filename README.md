@@ -10,29 +10,30 @@
 
 ## What is Blueberry?
 
-Blueberry is a ReAct (Reasoning + Acting) agent that can autonomously conduct web research and execute desktop actions inside a sandboxed folder.
+Blueberry is an agentic RAG system that combines autonomous web research, vector database retrieval, stateful planning, tool execution, and sandboxed file operations into one traceable loop.
 
-Instead of only generating text, Blueberry follows an execution loop: it reasons about the next best step, calls one tool, observes the result, updates state, and repeats until the task is complete.
+It is built for research-to-delivery workflows, where the agent researches, retrieves, reasons, validates, and generates real outputs like PDFs, Word documents, spreadsheets, Markdown files, CSVs, and presentations.
 
 ## Design Overview
 
-Blueberry is designed as an autonomous research-to-delivery system with clear separation between planning, execution, and safety controls.
+Blueberry separates planning, retrieval, execution, and reliability controls so each step is tied to a concrete tool call and an observed result.
 
-1. The planner decides the next action in short iterative steps.
-2. The tool layer performs concrete operations (web, retrieval, files, document generation).
-3. The runtime tracks state across iterations (visited websites, retrieved context, pending outputs, changed files).
-4. The controller enforces guardrails (scope limits, action constraints, recovery logic, completion checks).
+1. The context builder prepares policy context, workflow context, and session working memory.
+2. The planner chooses exactly one next action per ReAct iteration.
+3. The tool layer performs concrete operations across web research, retrieval, desktop inspection, and file generation.
+4. The runtime updates session working memory after tool execution, including visited sources, retrieved chunks, executed tools, and completed files.
+5. The controller enforces guardrails through sandboxed filesystem access, action constraints, retry handling, and completion checks.
 
-This architecture keeps behavior transparent and auditable while still allowing open-ended task execution.
+This architecture keeps open-ended research workflows transparent while still allowing the agent to produce real deliverables.
 
 ## ReAct Execution Model
 
 Blueberry runs in iterative cycles with explicit tool usage.
 
-1. Read current context and task state.
+1. Read current policy, workflow progress, and session working memory.
 2. Choose exactly one best next tool action.
 3. Execute the tool and capture structured output.
-4. Update runtime memory and constraints.
+4. Update workflow state and session working memory.
 5. Continue until completion criteria are met.
 
 This reduces hallucinated “I did X” claims and ties progress to actual successful tool calls.
@@ -51,12 +52,14 @@ Blueberry exposes tools across research, retrieval, and desktop execution.
 
 ## Research and Memory Design
 
-Blueberry does not treat each step as stateless.
+Blueberry does not treat each step as stateless. Tool executions modify session working memory, and that memory shapes the next planner decision.
 
 - Web collection results are tracked per session.
-- Retrieved context is cached and reused for multi-file output flows.
-- Additional research is triggered only when needed.
-- Search loops are bounded by configurable min/max step budgets.
+- Visited-source memory helps avoid duplicate research.
+- Retrieved chunks are cached and reused across multi-file output flows.
+- Indexed chunks can be filtered by selected source domains from metadata before retrieval.
+- Additional research is triggered only when the current evidence is not enough.
+- Search loops are bounded by configurable step limits.
 
 This allows deeper research without uncontrolled wandering.
 
@@ -65,6 +68,7 @@ This allows deeper research without uncontrolled wandering.
 Blueberry can produce deliverables in multiple formats with grounded content generation.
 
 - Supports `.docx`, `.xlsx`, `.pdf`, `.pptx`, `.md`, `.txt`, `.csv`
+- Uses retrieved evidence as context for deliverable generation
 - Uses structured validation and retry logic in document preparation
 - Enforces format-specific quality checks before final write
 - Supports update and conversion flows for existing files
@@ -72,17 +76,18 @@ Blueberry can produce deliverables in multiple formats with grounded content gen
 
 ## Safety Model
 
-Blueberry is built to act, but with strict execution boundaries.
+Blueberry is built to act, but with explicit operational boundaries.
 
 - Filesystem actions are restricted to a sandbox root
 - Required desktop actions cannot be “faked” by text-only responses
+- Chunk safety screening uses an LLM guard before web text is embedded into the vector store
 - Deletion is tightly controlled and blocked in unsafe flows
 - Tool calls are explicit and traceable
 - Iteration caps and recovery modes prevent endless loops
 
 ## Why this matters
 
-Blueberry is not just a conversational assistant. It is a task-completion agent that can research, decide, act, and produce final artifacts with observable execution and bounded risk.
+Blueberry makes RAG operational: it does not only retrieve information, it can research, filter, reason, act, validate, and deliver files inside a controlled agentic runtime.
 
 ```mermaid
 flowchart LR
@@ -91,8 +96,8 @@ flowchart LR
   subgraph CP["Governance & Runtime Context"]
     direction TB
     POLICY["Policy Context\ncapabilities, rules, constraints"]
-    WORKFLOW["Workflow Context\ncurrent step, budgets, pending outputs"]
-    STATE["State Context\nexecuted tools, visited sources, retrieved chunks, completed files"]
+    WORKFLOW["Workflow Context\ntask progress, phase, next needs"]
+    STATE["Session Working Memory\nexecuted tools, visited sources, retrieved chunks, completed files"]
   end
 
   RUNTIME --> POLICY
@@ -101,12 +106,12 @@ flowchart LR
 
   subgraph REACT_LOOP["ReAct Iteration (explicit loop)"]
     direction TB
-    RB["A) Build iteration message\nfrom policy + workflow + state"]
+    RB["A) Build iteration message\nfrom policy + workflow + memory"]
     RP["B) Plan exactly one next action\nPlanner model: gemini-3.1-pro-preview"]
     RX["C) Execute one tool call"]
     RO["D) Observe structured tool result"]
     RETRY["Retry Manager"]
-    RU["E) Update workflow + state"]
+    RU["E) Update workflow + memory"]
     RD{"F) Done?"}
 
     RB --> RP --> RX --> RO --> RU --> RD
@@ -195,13 +200,13 @@ flowchart LR
 ```
 
 
-The above video tutorials show two main blueberry use cases:
+The above video tutorials show two main Blueberry use cases:
 
 ### (Strawberry) Competitor Analysis 
-It shows how bluebarry can autonomously conduct market competitor analysis and create multiple files using the retrieved information. Specifically, it shows transparently end to end the creation of pdf with structured comparison on strongest and weakest points, and a xlsx file comparing the features of the different products
+It shows how Blueberry can autonomously conduct market competitor analysis and create multiple files using retrieved information. Specifically, it shows the end-to-end creation of a PDF with a structured comparison of strongest and weakest points, plus an XLSX file comparing product features.
 
-###  News Research 
-It shows how blueberry can autonomously plan, reason and research critically the latest web news from different sources. Especially, it shows how it can explore the files in the sandbox folder (blueberry), in this case, it finds an already exisiting relevant file to the request, it converts the .docx file into a .pdf file format and update the file content with the latest news as user requested
+### News Research 
+It shows how Blueberry can autonomously plan, reason, and research the latest news from different sources. It also shows how Blueberry can explore files in the sandbox folder, find an existing relevant file, convert a `.docx` file into a `.pdf`, and update the file content with the latest news requested by the user.
 
 
 
@@ -222,7 +227,7 @@ $ pnpm dev
 ```
 
 ### Python Agent + Chroma Setup
-Blueberry now includes a project-local Chroma setup for future vector-search work.
+Blueberry includes a project-local Chroma setup for vector-search-backed research memory.
 
 Create the local Python environment, install the Python agent dependencies, and bootstrap a persistent Chroma database in `data/chroma`:
 
