@@ -90,12 +90,9 @@ flowchart LR
 
   subgraph CP["Governance & Runtime Context"]
     direction TB
-    POLICY["Policy Context
-capabilities, rules, constraints"]
-    WORKFLOW["Workflow Context
-current step, budgets, pending outputs"]
-    STATE["State Context
-executed tools, visited sources, retrieved chunks, completed files"]
+    POLICY["Policy Context\ncapabilities, rules, constraints"]
+    WORKFLOW["Workflow Context\ncurrent step, budgets, pending outputs"]
+    STATE["State Context\nexecuted tools, visited sources, retrieved chunks, completed files"]
   end
 
   RUNTIME --> POLICY
@@ -104,10 +101,8 @@ executed tools, visited sources, retrieved chunks, completed files"]
 
   subgraph REACT_LOOP["ReAct Iteration (explicit loop)"]
     direction TB
-    RB["A) Build iteration message
-from policy + workflow + state"]
-    RP["B) Plan exactly one next action
-Planner model: gemini-3.1-pro-preview"]
+    RB["A) Build iteration message\nfrom policy + workflow + state"]
+    RP["B) Plan exactly one next action\nPlanner model: gemini-3.1-pro-preview"]
     RX["C) Execute one tool call"]
     RO["D) Observe structured tool result"]
     RETRY["Retry Manager"]
@@ -130,35 +125,11 @@ Planner model: gemini-3.1-pro-preview"]
     direction TB
     ROUTER["Tool Router"]
 
-    WEB["Web Research Tools
-read_web_page
-google_search_and_collect"]
-    RETR["Retrieval Tools
-retrieve_relevant_chunks"]
-    FILES["File Generation / Edit Tools
-write_txt_file
-write_markdown_file
-write_csv_file
-write_word_file
-write_excel_file
-write_pdf_file
-write_powerpoint_file
-write_text_file
-add_file_to_existing_folder
-edit_desktop_file
-convert_desktop_file_format
-create_folder
-delete_desktop_file"]
-    DESKTOP["Desktop Inspection Tools
-list_desktop_entries
-read_desktop_file
-read_desktop_file_if_exists
-show_desktop_view
-show_desktop_folder
-click_desktop_folder
-move_cursor"]
-    SESSION["Session Control Tools
-close_agent_session"]
+    WEB["Web Research Tools\nread_web_page\ngoogle_search_and_collect"]
+    RETR["Retrieval Tools\nretrieve_relevant_chunks"]
+    FILES["File Generation / Edit Tools\nwrite_txt_file\nwrite_markdown_file\nwrite_csv_file\nwrite_word_file\nwrite_excel_file\nwrite_pdf_file\nwrite_powerpoint_file\nwrite_text_file\nadd_file_to_existing_folder\nedit_desktop_file\nconvert_desktop_file_format\ncreate_folder\ndelete_desktop_file"]
+    DESKTOP["Desktop Inspection Tools\nlist_desktop_entries\nread_desktop_file\nread_desktop_file_if_exists\nshow_desktop_view\nshow_desktop_folder\nclick_desktop_folder\nmove_cursor"]
+    SESSION["Session Control Tools\nclose_agent_session"]
 
     ROUTER --> WEB
     ROUTER --> RETR
@@ -171,30 +142,31 @@ close_agent_session"]
 
   subgraph KP["Knowledge & Retrieval Pipeline (RAG)"]
     direction TB
-    EXTRACT["Page extraction + metadata"]
-    INJECT["Prompt-injection screening"]
-    CHUNK["Chunking
-size 1000, overlap 200"]
-    EMBED["Embeddings
-gemini-embedding-001"]
-    VS[("Vector Store")]
-    DOMAINS["Source-domain catalog
-available_source_domains
-from chunk metadata"]
-    SELECT["Source selection
-selected_source_domains"]
-    FILTER["Metadata filter
-load candidates where
-source_domain is selected"]
-    MQR["Multi-query retrieval
-3 queries, top-5 each"]
-    PRUNE["Merge + dedupe + relevance prune
-final top-12"]
 
-    EXTRACT --> INJECT --> CHUNK --> EMBED --> VS
-    VS --> DOMAINS --> SELECT --> FILTER
+    subgraph INDEX["Indexing Section"]
+      direction TB
+      EXTRACT["Page extraction + metadata"]
+      CHUNK["Chunking\nsize 1000, overlap 200"]
+      SAFETY["Chunk safety screening\nLLM guard: gemini-3.1-pro-preview\nprompt-injection / malicious chunk check"]
+      EMBED["Embeddings\ngemini-embedding-001"]
+      VS[("Vector Store")]
+
+      EXTRACT --> CHUNK --> SAFETY --> EMBED --> VS
+    end
+
+    subgraph RETRIEVAL["Retrieval Section"]
+      direction TB
+      DOMAINS["Source-domain catalog\navailable_source_domains\nfrom chunk metadata"]
+      SELECT["Source selection\nselected_source_domains"]
+      FILTER["Metadata filter\nload candidates where\nsource_domain is selected"]
+      MQR["Multi-query retrieval\n3 queries, top-5 each"]
+      PRUNE["Merge + dedupe + relevance prune\nfinal top-12"]
+
+      DOMAINS --> SELECT --> FILTER --> MQR --> PRUNE
+    end
+
+    VS --> DOMAINS
     VS --> FILTER
-    FILTER --> MQR --> PRUNE
   end
 
   WEB --> EXTRACT
@@ -202,12 +174,8 @@ final top-12"]
 
   subgraph GEN["Deliverable Synthesis Pipeline"]
     direction TB
-    PLANNER["Planner
-gemini-3.1-pro-preview
-chooses next action"]
-    WRITER["Writer
-gemini-2.5-flash
-uses request + retrieved evidence"]
+    PLANNER["Planner\ngemini-3.1-pro-preview\nchooses next action"]
+    WRITER["Writer\ngemini-2.5-flash\nuses request + retrieved evidence"]
     VALIDATE["Structured output validation"]
     OUT[("Deliverable Artifacts")]
 
@@ -289,4 +257,3 @@ BLUEBERRY_AGENT_PYTHON=
 # Optional inactivity timeout. Default is 600000 (10 minutes).
 BLUEBERRY_AGENT_RUN_TIMEOUT_MS=
 ```
-
