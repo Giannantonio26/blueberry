@@ -37,6 +37,8 @@ Blueberry runs in iterative cycles with explicit tool usage.
 
 This reduces hallucinated “I did X” claims and ties progress to actual successful tool calls.
 
+Tool calls are wrapped with bounded retry management: failures are observed, retried with constraints, and either recovered via fallback paths or recorded before the next iteration.
+
 ## Tooling Capabilities
 
 Blueberry exposes tools across research, retrieval, and desktop execution.
@@ -44,10 +46,9 @@ Blueberry exposes tools across research, retrieval, and desktop execution.
 - Web context tools: `read_web_page`, `google_search_and_collect`
 - Retrieval tool: `retrieve_relevant_chunks` (uses session-indexed research context)
 - Session control: `close_agent_session`
-- Desktop inspection: `list_desktop_entries`, `read_desktop_file`, `read_desktop_file_if_exists`
-- Desktop mutation: `create_folder`, `edit_desktop_file`, `convert_desktop_file_format`, `delete_desktop_file`
-- File generation: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`
-- UI control for desktop interactions: `show_desktop_view`, `show_desktop_folder`, `click_desktop_folder`, `move_cursor`
+- File generation/edit: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`, `edit_desktop_file`, `convert_desktop_file_format`
+- Desktop inspection/navigation (read-only): `list_desktop_entries`, `read_desktop_file`, `read_desktop_file_if_exists`, `show_desktop_view`, `show_desktop_folder`, `click_desktop_folder`, `move_cursor`
+- Folder/file-structure mutation: `create_folder`, `delete_desktop_file`
 
 ## Research and Memory Design
 
@@ -85,103 +86,135 @@ Blueberry is built to act, but with strict execution boundaries.
 Blueberry is not just a conversational assistant. It is a task-completion agent that can research, decide, act, and produce final artifacts with observable execution and bounded risk.
 
 ```mermaid
-flowchart TB
-  U["User request"] --> PY["Agent runtime<br/>prompts + dispatch"]
+flowchart LR
+  U["1) User Request"] --> RUNTIME["2) Agent Runtime / Context Builder"]
 
-  subgraph CTX["Per-iteration context"]
-    P1["Policy<br/>capabilities + rules"]
-    P2["Workflow<br/>step, search budget,<br/>pending outputs"]
-    P3["State<br/>chat history, visited websites,<br/>retrieved chunks, web search counts,<br/>force-write mode, pending outputs, <br/>changed files"]
+  subgraph CP["Governance & Runtime Context"]
+    direction TB
+    POLICY["Policy Context
+capabilities, rules, constraints"]
+    WORKFLOW["Workflow Context
+current step, budgets, pending outputs"]
+    STATE["State Context
+executed tools, visited sources, retrieved chunks, completed files"]
   end
 
-  subgraph LOOP["ReAct loop"]
-    B["Build message"]
-    L["Plan<br/>gemini-3-flash-preview"]
-    X["Execute tool"]
-    O["Observe result"]
-    D{"Done?"}
-    B --> L --> X
-    O --> D
-    D -- "No" --> B
+  RUNTIME --> POLICY
+  RUNTIME --> WORKFLOW
+  RUNTIME --> STATE
+
+  subgraph REACT_LOOP["ReAct Iteration (explicit loop)"]
+    direction TB
+    RB["A) Build iteration message
+from policy + workflow + state"]
+    RP["B) Plan exactly one next action"]
+    RX["C) Execute one tool call"]
+    RO["D) Observe structured tool result"]
+    RETRY["Retry Manager"]
+    RU["E) Update workflow + state"]
+    RD{"F) Done?"}
+
+    RB --> RP --> RX --> RO --> RU --> RD
+    RO -. tool failure .-> RETRY
+    RETRY -. retry with constraints .-> RX
+    RETRY -. exhausted retries .-> RU
+    RD -- "No: next iteration" --> RB
+    RD -- "Yes" --> FINAL["Final response / deliverable"]
   end
 
-  PY --> P1
-  PY --> P2
-  PY --> P3
-  P1 --> B
-  P2 --> B
-  P3 --> B
-  D -- "Yes" --> F["Final synthesis<br/>gemini-3-flash-preview"]
+  POLICY --> RB
+  WORKFLOW --> RB
+  STATE --> RB
 
-  subgraph TOOLS["Tool categories"]
-    T1["Web<br/>read_web_page<br/>google_search_and_collect"]
-    T2["Retrieval<br/>retrieve_relevant_chunks"]
-    T3["Files<br/>write_pdf_file<br/>edit_desktop_file<br/>convert_desktop_file_format"]
-    T4["Desktop<br/>list_desktop_entries<br/>show_desktop_folder"]
-    T5["Session<br/>close_agent_session"]
+  subgraph EP["Action Layer: Tool Categories (no overlap)"]
+    direction TB
+    ROUTER["Tool Router"]
+
+    WEB["Web Research Tools
+read_web_page
+google_search_and_collect"]
+    RETR["Retrieval Tools
+retrieve_relevant_chunks"]
+    FILES["File Generation / Edit Tools
+write_txt_file
+write_markdown_file
+write_csv_file
+write_word_file
+write_excel_file
+write_pdf_file
+write_powerpoint_file
+write_text_file
+add_file_to_existing_folder
+edit_desktop_file
+convert_desktop_file_format"]
+    DESKTOP["Desktop Inspection Tools
+list_desktop_entries
+read_desktop_file
+read_desktop_file_if_exists
+show_desktop_view
+show_desktop_folder
+click_desktop_folder
+move_cursor"]
+    FOLDER["Folder / File-structure Tools
+create_folder
+delete_desktop_file"]
+    SESSION["Session Control Tools
+close_agent_session"]
+
+    ROUTER --> WEB
+    ROUTER --> RETR
+    ROUTER --> FILES
+    ROUTER --> DESKTOP
+    ROUTER --> FOLDER
+    ROUTER --> SESSION
   end
 
-  X --> T1
-  X --> T2
-  X --> T3
-  X --> T4
-  X --> T5
-  T1 -->|"updates runtime state"| P3
-  T2 -->|"updates runtime state"| P3
-  T3 -->|"updates runtime state"| P3
-  T4 -->|"updates runtime state"| P3
-  T5 -->|"updates runtime state"| P3
+  RX --> ROUTER
 
-  subgraph RAG["Research + RAG"]
-    COK["Accept cookies"]
-    DISC["Skip unusable pages<br/>visited, blocked, captcha"]
-    SRC["Source text<br/>+ metadata"]
-    CHK["Chunk Splitting<br/>size 1000<br/>overlap 200"]
-    SAFE["Safety screen<br/>prompt-injection check<br/>gemini-3-flash-preview"]
-    KEEP{"Safe chunk?"}
-    EMB["Embed chunk<br/>gemini-embedding-001"]
-    IDX["Store chunk<br/>content + metadata + embedding"]
-    VS[("Vector store")]
-    SEL["Source selector"]
-    MQ["Generate 3 queries"]
-    RQ["Retrieve per query<br/>score chunks<br/>top 5 each"]
-    MERGE["Merge scored chunks"]
-    DEDUPE["Remove duplicates"]
-    PRUNE["Prune by relevance<br/>top 12"]
+  subgraph KP["Knowledge & Retrieval Pipeline (RAG)"]
+    direction TB
+    EXTRACT["Page extraction + metadata"]
+    INJECT["Prompt-injection screening"]
+    CHUNK["Chunking
+size 1000, overlap 200"]
+    EMBED["Embeddings
+gemini-embedding-001"]
+    VS[("Vector Store")]
+    MQR["Multi-query retrieval
+3 queries, top-5 each"]
+    PRUNE["Merge + dedupe + relevance prune
+final top-12"]
+
+    EXTRACT --> INJECT --> CHUNK --> EMBED --> VS
+    VS --> MQR --> PRUNE
   end
 
-  subgraph GEN["Grounded generation"]
-    WC["Writer context<br/>request + chunks + payload"]
-    WL["Writer<br/>gemini-2.5-flash"]
-    FS[("Output state")]
+  WEB --> EXTRACT
+  RETR --> MQR
+
+  subgraph GEN["Deliverable Synthesis Pipeline"]
+    direction TB
+    PLANNER["Planner
+chooses next action"]
+    WRITER["Writer
+uses request + retrieved evidence"]
+    VALIDATE["Structured output validation"]
+    OUT[("Deliverable Artifacts")]
+
+    WRITER --> VALIDATE --> OUT
   end
 
-  V[("Visited websites cache")]
-  R[("Chunk cache")]
+  RP --> PLANNER
+  PLANNER --> ROUTER
+  PRUNE --> WRITER
 
-  T1 --> COK --> DISC --> SRC --> CHK --> SAFE --> KEEP
-  KEEP -- "Yes" --> EMB --> IDX --> VS
-  KEEP -- "No" --> O
-  T1 --> SRC --> O
-  SRC --> V
-
-  T2 --> SEL --> MQ --> RQ
-  VS --> RQ
-  RQ --> MERGE --> DEDUPE --> PRUNE
-  PRUNE --> R
-  PRUNE --> O
-
-  T3 --> WC --> WL --> FS --> O
-  R --> WC
-
-  T4 --> O
-  T5 --> O
-  T5 -->|"clear chunks"| R
-  T5 -->|"clear visits + counters"| V
-
-  V --> P3
-  R --> P3
-  FS --> P3
+  WEB --> RU
+  RETR --> RU
+  FILES --> RU
+  DESKTOP --> RU
+  FOLDER --> RU
+  SESSION --> RU
+  VALIDATE --> RU
 ```
 
 
