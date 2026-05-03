@@ -178,17 +178,27 @@ size 1000, overlap 200"]
     EMBED["Embeddings
 gemini-embedding-001"]
     VS[("Vector Store")]
+    DOMAINS["Source-domain catalog
+available_source_domains
+from chunk metadata"]
+    SELECT["Source selection
+selected_source_domains"]
+    FILTER["Metadata filter
+load candidates where
+source_domain is selected"]
     MQR["Multi-query retrieval
 3 queries, top-5 each"]
     PRUNE["Merge + dedupe + relevance prune
 final top-12"]
 
     EXTRACT --> INJECT --> CHUNK --> EMBED --> VS
-    VS --> MQR --> PRUNE
+    VS --> DOMAINS --> SELECT --> FILTER
+    VS --> FILTER
+    FILTER --> MQR --> PRUNE
   end
 
   WEB --> EXTRACT
-  RETR --> MQR
+  RETR --> SELECT
 
   subgraph GEN["Deliverable Synthesis Pipeline"]
     direction TB
