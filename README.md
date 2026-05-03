@@ -46,9 +46,8 @@ Blueberry exposes tools across research, retrieval, and desktop execution.
 - Web context tools: `read_web_page`, `google_search_and_collect`
 - Retrieval tool: `retrieve_relevant_chunks` (uses session-indexed research context)
 - Session control: `close_agent_session`
-- File generation/edit: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`, `edit_desktop_file`, `convert_desktop_file_format`
+- File generation/edit: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`, `edit_desktop_file`, `convert_desktop_file_format`, `create_folder`, `delete_desktop_file`
 - Desktop inspection/navigation (read-only): `list_desktop_entries`, `read_desktop_file`, `read_desktop_file_if_exists`, `show_desktop_view`, `show_desktop_folder`, `click_desktop_folder`, `move_cursor`
-- Folder/file-structure mutation: `create_folder`, `delete_desktop_file`
 
 ## Research and Memory Design
 
@@ -147,7 +146,9 @@ write_powerpoint_file
 write_text_file
 add_file_to_existing_folder
 edit_desktop_file
-convert_desktop_file_format"]
+convert_desktop_file_format
+create_folder
+delete_desktop_file"]
     DESKTOP["Desktop Inspection Tools
 list_desktop_entries
 read_desktop_file
@@ -156,9 +157,6 @@ show_desktop_view
 show_desktop_folder
 click_desktop_folder
 move_cursor"]
-    FOLDER["Folder / File-structure Tools
-create_folder
-delete_desktop_file"]
     SESSION["Session Control Tools
 close_agent_session"]
 
@@ -166,7 +164,6 @@ close_agent_session"]
     ROUTER --> RETR
     ROUTER --> FILES
     ROUTER --> DESKTOP
-    ROUTER --> FOLDER
     ROUTER --> SESSION
   end
 
@@ -215,7 +212,6 @@ uses request + retrieved evidence"]
   RETR --> RU
   FILES --> RU
   DESKTOP --> RU
-  FOLDER --> RU
   SESSION --> RU
   VALIDATE --> RU
 ```
