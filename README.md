@@ -107,7 +107,8 @@ executed tools, visited sources, retrieved chunks, completed files"]
     direction TB
     RB["A) Build iteration message
 from policy + workflow + state"]
-    RP["B) Plan exactly one next action"]
+    RP["B) Plan exactly one next action
+Planner model: gemini-3.1-pro-preview"]
     RX["C) Execute one tool call"]
     RO["D) Observe structured tool result"]
     RETRY["Retry Manager"]
@@ -195,8 +196,10 @@ final top-12"]
   subgraph GEN["Deliverable Synthesis Pipeline"]
     direction TB
     PLANNER["Planner
+gemini-3.1-pro-preview
 chooses next action"]
     WRITER["Writer
+gemini-2.5-flash
 uses request + retrieved evidence"]
     VALIDATE["Structured output validation"]
     OUT[("Deliverable Artifacts")]
