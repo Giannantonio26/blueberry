@@ -37,6 +37,8 @@ Blueberry runs in iterative cycles with explicit tool usage.
 
 This reduces hallucinated “I did X” claims and ties progress to actual successful tool calls.
 
+Tool calls are wrapped with bounded retry management: failures are observed, retried with constraints, and either recovered via fallback paths or recorded before the next iteration.
+
 ## Tooling Capabilities
 
 Blueberry exposes tools across research, retrieval, and desktop execution.
@@ -44,10 +46,9 @@ Blueberry exposes tools across research, retrieval, and desktop execution.
 - Web context tools: `read_web_page`, `google_search_and_collect`
 - Retrieval tool: `retrieve_relevant_chunks` (uses session-indexed research context)
 - Session control: `close_agent_session`
-- Desktop inspection: `list_desktop_entries`, `read_desktop_file`, `read_desktop_file_if_exists`
-- Desktop mutation: `create_folder`, `edit_desktop_file`, `convert_desktop_file_format`, `delete_desktop_file`
-- File generation: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`
-- UI control for desktop interactions: `show_desktop_view`, `show_desktop_folder`, `click_desktop_folder`, `move_cursor`
+- File generation/edit: `write_txt_file`, `write_markdown_file`, `write_csv_file`, `write_word_file`, `write_excel_file`, `write_pdf_file`, `write_powerpoint_file`, `write_text_file`, `add_file_to_existing_folder`, `edit_desktop_file`, `convert_desktop_file_format`
+- Desktop inspection/navigation (read-only): `list_desktop_entries`, `read_desktop_file`, `read_desktop_file_if_exists`, `show_desktop_view`, `show_desktop_folder`, `click_desktop_folder`, `move_cursor`
+- Folder/file-structure mutation: `create_folder`, `delete_desktop_file`
 
 ## Research and Memory Design
 
