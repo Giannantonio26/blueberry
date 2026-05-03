@@ -85,103 +85,111 @@ Blueberry is built to act, but with strict execution boundaries.
 Blueberry is not just a conversational assistant. It is a task-completion agent that can research, decide, act, and produce final artifacts with observable execution and bounded risk.
 
 ```mermaid
-flowchart TB
-  U["User request"] --> PY["Agent runtime<br/>prompts + dispatch"]
+flowchart LR
+  U["1) User Request"] --> RUNTIME["2) Agent Runtime / Context Builder"]
 
-  subgraph CTX["Per-iteration context"]
-    P1["Policy<br/>capabilities + rules"]
-    P2["Workflow<br/>step, search budget,<br/>pending outputs"]
-    P3["State<br/>chat history, visited websites,<br/>retrieved chunks, web search counts,<br/>force-write mode, pending outputs, <br/>changed files"]
+  subgraph CP["Control Plane"]
+    direction TB
+    POLICY["Policy Engine
+permissions, tool rules, safety constraints"]
+    WORKFLOW["Workflow Context
+current step, budget, completion, pending outputs"]
+    STATE["State Context
+tool history, visited sources, retrieved chunks, completed files"]
+    REACT["Execution-Grounded ReAct Controller
+plan -> one action -> observe -> update"]
+    RECOVERY["Bounded Recovery Controller
+retry caps, corrective instructions, failover"]
+
+    POLICY --> REACT
+    WORKFLOW --> REACT
+    STATE --> REACT
+    REACT -. failure .-> RECOVERY
+    RECOVERY -. feedback .-> REACT
   end
 
-  subgraph LOOP["ReAct loop"]
-    B["Build message"]
-    L["Plan<br/>gemini-3-flash-preview"]
-    X["Execute tool"]
-    O["Observe result"]
-    D{"Done?"}
-    B --> L --> X
-    O --> D
-    D -- "No" --> B
+  RUNTIME --> POLICY
+  RUNTIME --> WORKFLOW
+  RUNTIME --> STATE
+  RUNTIME --> REACT
+
+  subgraph EP["Execution Plane"]
+    direction TB
+    ROUTER["Tool Router"]
+    WEB["Web Research Tools"]
+    RETR["Retrieval Tool"]
+    FILES["File Generation / Edit Tools"]
+    DESKTOP["Desktop Inspection / Mutation Tools"]
+    SESSION["Session Control"]
+
+    ROUTER --> WEB
+    ROUTER --> RETR
+    ROUTER --> FILES
+    ROUTER --> DESKTOP
+    ROUTER --> SESSION
   end
 
-  PY --> P1
-  PY --> P2
-  PY --> P3
-  P1 --> B
-  P2 --> B
-  P3 --> B
-  D -- "Yes" --> F["Final synthesis<br/>gemini-3-flash-preview"]
+  REACT --> ROUTER
 
-  subgraph TOOLS["Tool categories"]
-    T1["Web<br/>read_web_page<br/>google_search_and_collect"]
-    T2["Retrieval<br/>retrieve_relevant_chunks"]
-    T3["Files<br/>write_pdf_file<br/>edit_desktop_file<br/>convert_desktop_file_format"]
-    T4["Desktop<br/>list_desktop_entries<br/>show_desktop_folder"]
-    T5["Session<br/>close_agent_session"]
+  subgraph KP["Knowledge Plane (RAG)"]
+    direction TB
+    EXTRACT["Page extraction + metadata"]
+    INJECT["Prompt-injection safety screen"]
+    CHUNK["Chunking
+size 1000, overlap 200"]
+    EMBED["Embeddings
+gemini-embedding-001"]
+    VS[("Vector Store")]
+    MQR["Multi-query retrieval
+3 queries, top-5 each"]
+    DEDUPE["Merge + dedupe + relevance prune
+final top-12"]
+
+    EXTRACT --> INJECT --> CHUNK --> EMBED --> VS
+    VS --> MQR --> DEDUPE
   end
 
-  X --> T1
-  X --> T2
-  X --> T3
-  X --> T4
-  X --> T5
-  T1 -->|"updates runtime state"| P3
-  T2 -->|"updates runtime state"| P3
-  T3 -->|"updates runtime state"| P3
-  T4 -->|"updates runtime state"| P3
-  T5 -->|"updates runtime state"| P3
+  WEB --> EXTRACT
+  RETR --> MQR
 
-  subgraph RAG["Research + RAG"]
-    COK["Accept cookies"]
-    DISC["Skip unusable pages<br/>visited, blocked, captcha"]
-    SRC["Source text<br/>+ metadata"]
-    CHK["Chunk Splitting<br/>size 1000<br/>overlap 200"]
-    SAFE["Safety screen<br/>prompt-injection check<br/>gemini-3-flash-preview"]
-    KEEP{"Safe chunk?"}
-    EMB["Embed chunk<br/>gemini-embedding-001"]
-    IDX["Store chunk<br/>content + metadata + embedding"]
-    VS[("Vector store")]
-    SEL["Source selector"]
-    MQ["Generate 3 queries"]
-    RQ["Retrieve per query<br/>score chunks<br/>top 5 each"]
-    MERGE["Merge scored chunks"]
-    DEDUPE["Remove duplicates"]
-    PRUNE["Prune by relevance<br/>top 12"]
+  subgraph GEN["Grounded Generation"]
+    direction TB
+    PLANNER["Planner
+chooses next action"]
+    WRITER["Writer
+generates deliverable from request + evidence"]
+    VALIDATE["Structured output validation"]
+    OUT[("Deliverable Artifacts")]
+
+    WRITER --> VALIDATE --> OUT
+    VALIDATE -. invalid output .-> RECOVERY
   end
 
-  subgraph GEN["Grounded generation"]
-    WC["Writer context<br/>request + chunks + payload"]
-    WL["Writer<br/>gemini-2.5-flash"]
-    FS[("Output state")]
+  REACT --> PLANNER
+  PLANNER --> ROUTER
+  DEDUPE --> WRITER
+
+  WEB --> STATE
+  RETR --> STATE
+  FILES --> STATE
+  DESKTOP --> STATE
+  SESSION --> STATE
+  VALIDATE --> STATE
+
+  subgraph SAFETY["Safety Envelope (Cross-Cutting)"]
+    direction TB
+    S1["Sandboxed filesystem scope"]
+    S2["Explicit desktop actions"]
+    S3["Bounded search / iteration budgets"]
+    S4["Traceable tool-call audit"]
   end
 
-  V[("Visited websites cache")]
-  R[("Chunk cache")]
-
-  T1 --> COK --> DISC --> SRC --> CHK --> SAFE --> KEEP
-  KEEP -- "Yes" --> EMB --> IDX --> VS
-  KEEP -- "No" --> O
-  T1 --> SRC --> O
-  SRC --> V
-
-  T2 --> SEL --> MQ --> RQ
-  VS --> RQ
-  RQ --> MERGE --> DEDUPE --> PRUNE
-  PRUNE --> R
-  PRUNE --> O
-
-  T3 --> WC --> WL --> FS --> O
-  R --> WC
-
-  T4 --> O
-  T5 --> O
-  T5 -->|"clear chunks"| R
-  T5 -->|"clear visits + counters"| V
-
-  V --> P3
-  R --> P3
-  FS --> P3
+  EVIDENCE["Evidence Provenance
+source -> chunk metadata -> retrieved evidence -> output"]
+  EXTRACT --> EVIDENCE
+  CHUNK --> EVIDENCE
+  DEDUPE --> EVIDENCE
+  OUT --> EVIDENCE
 ```
 
 
