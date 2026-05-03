@@ -89,53 +89,92 @@ Blueberry is not just a conversational assistant. It is a task-completion agent 
 flowchart LR
   U["1) User Request"] --> RUNTIME["2) Agent Runtime / Context Builder"]
 
-  subgraph CP["Control Plane"]
+  subgraph CP["Governance & Runtime Context"]
     direction TB
-    POLICY["Policy Engine
-permissions, tool rules, safety constraints"]
+    POLICY["Policy Context
+capabilities, rules, constraints"]
     WORKFLOW["Workflow Context
-current step, budget, completion, pending outputs"]
+current step, budgets, pending outputs"]
     STATE["State Context
-tool history, visited sources, retrieved chunks, completed files"]
-    REACT["Execution-Grounded ReAct Controller
-plan -> one action -> observe -> update"]
-    RECOVERY["Bounded Recovery Controller
-retry caps, corrective instructions, failover"]
-
-    POLICY --> REACT
-    WORKFLOW --> REACT
-    STATE --> REACT
-    REACT -. failure .-> RECOVERY
-    RECOVERY -. feedback .-> REACT
+executed tools, visited sources, retrieved chunks, completed files"]
   end
 
   RUNTIME --> POLICY
   RUNTIME --> WORKFLOW
   RUNTIME --> STATE
-  RUNTIME --> REACT
 
-  subgraph EP["Execution Plane"]
+  subgraph REACT_LOOP["ReAct Iteration (explicit loop)"]
+    direction TB
+    RB["A) Build iteration message
+from policy + workflow + state"]
+    RP["B) Plan exactly one next action"]
+    RX["C) Execute one tool call"]
+    RO["D) Observe structured tool result"]
+    RETRY["Retry Manager"]
+    RU["E) Update workflow + state"]
+    RD{"F) Done?"}
+
+    RB --> RP --> RX --> RO --> RU --> RD
+    RO -. tool failure .-> RETRY
+    RETRY -. retry with constraints .-> RX
+    RETRY -. exhausted retries .-> RU
+    RD -- "No: next iteration" --> RB
+    RD -- "Yes" --> FINAL["Final response / deliverable"]
+  end
+
+  POLICY --> RB
+  WORKFLOW --> RB
+  STATE --> RB
+
+  subgraph EP["Action Layer: Tool Categories (no overlap)"]
     direction TB
     ROUTER["Tool Router"]
-    WEB["Web Research Tools"]
-    RETR["Retrieval Tool"]
-    FILES["File Generation / Edit Tools"]
-    DESKTOP["Desktop Inspection / Mutation Tools"]
-    SESSION["Session Control"]
+
+    WEB["Web Research Tools
+read_web_page
+google_search_and_collect"]
+    RETR["Retrieval Tools
+retrieve_relevant_chunks"]
+    FILES["File Generation / Edit Tools
+write_txt_file
+write_markdown_file
+write_csv_file
+write_word_file
+write_excel_file
+write_pdf_file
+write_powerpoint_file
+write_text_file
+add_file_to_existing_folder
+edit_desktop_file
+convert_desktop_file_format"]
+    DESKTOP["Desktop Inspection Tools
+list_desktop_entries
+read_desktop_file
+read_desktop_file_if_exists
+show_desktop_view
+show_desktop_folder
+click_desktop_folder
+move_cursor"]
+    FOLDER["Folder / File-structure Tools
+create_folder
+delete_desktop_file"]
+    SESSION["Session Control Tools
+close_agent_session"]
 
     ROUTER --> WEB
     ROUTER --> RETR
     ROUTER --> FILES
     ROUTER --> DESKTOP
+    ROUTER --> FOLDER
     ROUTER --> SESSION
   end
 
-  REACT --> ROUTER
+  RX --> ROUTER
 
-  subgraph KP["Knowledge Plane (RAG)"]
+  subgraph KP["Knowledge & Retrieval Pipeline (RAG)"]
     direction TB
     EXTRACT["Page extraction + metadata"]
-    INJECT["Prompt-injection safety screen"]
+    INJECT["Prompt-injection screening"]
     CHUNK["Chunking
 size 1000, overlap 200"]
     EMBED["Embeddings
@@ -143,54 +182,39 @@ gemini-embedding-001"]
     VS[("Vector Store")]
     MQR["Multi-query retrieval
 3 queries, top-5 each"]
-    DEDUPE["Merge + dedupe + relevance prune
+    PRUNE["Merge + dedupe + relevance prune
 final top-12"]
 
     EXTRACT --> INJECT --> CHUNK --> EMBED --> VS
-    VS --> MQR --> DEDUPE
+    VS --> MQR --> PRUNE
   end
 
   WEB --> EXTRACT
   RETR --> MQR
 
-  subgraph GEN["Grounded Generation"]
+  subgraph GEN["Deliverable Synthesis Pipeline"]
     direction TB
     PLANNER["Planner
 chooses next action"]
     WRITER["Writer
-generates deliverable from request + evidence"]
+uses request + retrieved evidence"]
     VALIDATE["Structured output validation"]
     OUT[("Deliverable Artifacts")]
 
     WRITER --> VALIDATE --> OUT
-    VALIDATE -. invalid output .-> RECOVERY
   end
 
-  REACT --> PLANNER
+  RP --> PLANNER
   PLANNER --> ROUTER
-  DEDUPE --> WRITER
+  PRUNE --> WRITER
 
-  WEB --> STATE
-  RETR --> STATE
-  FILES --> STATE
-  DESKTOP --> STATE
-  SESSION --> STATE
-  VALIDATE --> STATE
-
-  subgraph SAFETY["Safety Envelope (Cross-Cutting)"]
-    direction TB
-    S1["Sandboxed filesystem scope"]
-    S2["Explicit desktop actions"]
-    S3["Bounded search / iteration budgets"]
-    S4["Traceable tool-call audit"]
-  end
-
-  EVIDENCE["Evidence Provenance
-source -> chunk metadata -> retrieved evidence -> output"]
-  EXTRACT --> EVIDENCE
-  CHUNK --> EVIDENCE
-  DEDUPE --> EVIDENCE
-  OUT --> EVIDENCE
+  WEB --> RU
+  RETR --> RU
+  FILES --> RU
+  DESKTOP --> RU
+  FOLDER --> RU
+  SESSION --> RU
+  VALIDATE --> RU
 ```
 
 
