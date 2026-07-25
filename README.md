@@ -1,5 +1,5 @@
 
-### SCREENRECORDED USE CASES🎬 🎬🎬
+### SCREENRECORDED USE CASES🎬 
 
 [Tutorial Market Competitor Analysis](./resources/CompetitorAnalysis.mp4)
 
@@ -202,7 +202,7 @@ flowchart LR
 
 The above video tutorials show two main Blueberry use cases:
 
-### (Strawberry) Competitor Analysis 
+### Competitor Analysis 
 It shows how Blueberry can autonomously conduct market competitor analysis and create multiple files using retrieved information. Specifically, it shows the end-to-end creation of a PDF with a structured comparison of strongest and weakest points, plus an XLSX file comparing product features.
 
 ### News Research 
