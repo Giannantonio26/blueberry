@@ -1,3 +1,13 @@
+<p align="center">
+  <img src="./resources/logo.png" alt="Blueberry Browser Logo" width="180" />
+</p>
+
+<h1 align="center">Blueberry Browser</h1>
+
+<p align="center">
+  Agentic RAG for autonomous web research, retrieval, reasoning, and file generation.
+</p>
+
 
 ### SCREENRECORDED USE CASES🎬 
 
@@ -5,8 +15,6 @@
 
 [Tutorial News Research](./resources/Tutorial_News_Research.mp4)
 
-
-## Blueberry Browser
 
 ## What is Blueberry?
 
