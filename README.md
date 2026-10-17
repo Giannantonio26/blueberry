@@ -8,6 +8,10 @@
   Agentic RAG for autonomous web research, retrieval, reasoning, and file generation.
 </p>
 
+<p align="center">
+  <img src="./resources/news-research-demo-fullflow.gif" alt="Blueberry News Research Demo" width="800" />
+</p>
+
 
 ### SCREENRECORDED USE CASES🎬 
 
